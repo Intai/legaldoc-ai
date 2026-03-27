@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LegalDoc AI — New Document</title>
+  <style>
+    /* ============================================================
+       DESIGN TOKENS (from style-guide.html)
+       ============================================================ */
+    :root {
+      /* Primary */
+      --color-primary-900: #0f1b2d;
+      --color-primary-800: #172a45;
+      --color-primary-700: #1e3a5f;
+      --color-primary-600: #27496d;
+      --color-primary-500: #2e5984;
+      --color-primary-400: #4a7caa;
+      --color-primary-300: #7ba3c7;
+      --color-primary-200: #b0c9de;
+      --color-primary-100: #dae6f0;
+      --color-primary-50:  #eef3f8;
+
+      /* Neutral */
+      --color-neutral-950: #0a0c0f;
+      --color-neutral-900: #141821;
+      --color-neutral-800: #1f2532;
+      --color-neutral-700: #333b4a;
+      --color-neutral-600: #4a5468;
+      --color-neutral-500: #636e83;
+      --color-neutral-400: #8490a5;
+      --color-neutral-300: #aab3c3;
+      --color-neutral-200: #cdd3dc;
+      --color-neutral-100: #e8ebf0;
+      --color-neutral-50:  #f4f5f7;
+      --color-neutral-25:  #f9fafb;
+
+      /* Status */
+      --color-success-700: #15613a;
+      --color-success-600: #1a7a4a;
+      --color-success-500: #22915a;
+      --color-success-100: #dcf5e7;
+      --color-success-50:  #f0faf4;
+
+      --color-warning-700: #92560a;
+      --color-warning-600: #b36b0d;
+      --color-warning-500: #d4820f;
+      --color-warning-100: #fef0d5;
+      --color-warning-50:  #fffaf0;
+
+      --color-error-700:   #9b1c1c;
+      --color-error-600:   #c42b2b;
+      --color-error-500:   #e04343;
+      --color-error-100:   #fde2e2;
+      --color-error-50:    #fef2f2;
+
+      /* Background */
+      --bg-page:           #f9fafb;
+      --bg-card:           #ffffff;
+      --bg-sidebar:        #f4f5f7;
+      --bg-sidebar-active: #eef3f8;
+      --bg-input:          #ffffff;
+      --bg-overlay:        rgba(10, 12, 15, 0.5);
+
+      /* Border */
+      --border-default:    #e8ebf0;
+      --border-strong:     #cdd3dc;
+      --border-focus:      #4a7caa;
+
+      /* Typography */
+      --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-document: Georgia, 'Times New Roman', 'DejaVu Serif', serif;
+
+      /* Font Sizes */
+      --text-xs:   0.75rem;
+      --text-sm:   0.875rem;
+      --text-base: 1rem;
+      --text-lg:   1.125rem;
+      --text-xl:   1.25rem;
+      --text-2xl:  1.5rem;
+      --text-3xl:  1.875rem;
+      --text-4xl:  2.25rem;
+
+      /* Line Heights */
+      --leading-tight:  1.25;
+      --leading-snug:   1.375;
+      --leading-normal: 1.5;
+      --leading-relaxed: 1.625;
+
+      /* Font Weights */
+      --font-normal:   400;
+      --font-medium:   500;
+      --font-semibold: 600;
+      --font-bold:     700;
+
+      /* Spacing */
+      --space-1:  0.25rem;
+      --space-2:  0.5rem;
+      --space-3:  0.75rem;
+      --space-4:  1rem;
+      --space-5:  1.25rem;
+      --space-6:  1.5rem;
+      --space-8:  2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+      --space-20: 5rem;
+
+      /* Border Radius */
+      --radius-sm:  0.25rem;
+      --radius-md:  0.375rem;
+      --radius-lg:  0.5rem;
+      --radius-xl:  0.75rem;
+
+      /* Shadows */
+      --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md:  0 2px 8px rgba(0,0,0,0.08);
+      --shadow-lg:  0 4px 16px rgba(0,0,0,0.1);
+
+      /* Transitions */
+      --transition-fast: 120ms ease;
+      --transition-base: 200ms ease;
+      --transition-slow: 300ms ease;
+    }
+
+    /* ============================================================
+       RESET & BASE
+       ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-ui);
+      font-size: var(--text-base);
+      line-height: var(--leading-normal);
+      color: var(--color-neutral-800);
+      background: var(--bg-page);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ============================================================
+       APP SHELL LAYOUT
+       ============================================================ */
+    .app-shell {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-default);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: var(--space-3);
+    }
+
+    .sidebar-logo {
+      font-size: var(--text-base);
+      font-weight: var(--font-bold);
+      color: var(--color-primary-800);
+      padding: var(--space-3) var(--space-3);
+      margin-bottom: var(--space-2);
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-neutral-600);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast);
+      text-decoration: none;
+    }
+
+    .sidebar-item:hover {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-800);
+    }
+
+    .sidebar-item.is-active {
+      background: var(--bg-sidebar-active);
+      color: var(--color-primary-700);
+      font-weight: var(--font-semibold);
+    }
+
+    .sidebar-item svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    /* Main area */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Topbar */
+    .topbar {
+      height: 56px;
+      flex-shrink: 0;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-default);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: 0 var(--space-5);
+    }
+
+    .topbar-hamburger {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      color: var(--color-neutral-600);
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      transition: background var(--transition-fast);
+    }
+
+    .topbar-hamburger:hover {
+      background: var(--color-neutral-100);
+    }
+
+    .search-input-wrap {
+      position: relative;
+    }
+
+    .search-input-wrap .input {
+      padding-left: var(--space-10);
+    }
+
+    .search-input-wrap svg {
+      position: absolute;
+      left: var(--space-3);
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-neutral-400);
+    }
+
+    .topbar-center {
+      flex: 1;
+    }
+
+    .topbar-search {
+      max-width: 280px;
+    }
+
+    .topbar-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--color-primary-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      color: var(--color-primary-800);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* ============================================================
+       SHARED: INPUT, SELECT, BUTTONS, BADGES
+       ============================================================ */
+    .input {
+      width: 100%;
+      height: 36px;
+      padding: 0 var(--space-3);
+      font-family: var(--font-ui);
+      font-size: var(--text-sm);
+      color: var(--color-neutral-800);
+      background: var(--bg-input);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+      outline: none;
+    }
+
+    .input::placeholder {
+      color: var(--color-neutral-400);
+    }
+
+    .input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(74, 124, 170, 0.15);
+    }
+
+    textarea.input {
+      height: auto;
+      padding: var(--space-3);
+      resize: vertical;
+      line-height: var(--leading-normal);
+    }
+
+    .select {
+      height: 36px;
+      padding: 0 var(--space-8) 0 var(--space-3);
+      font-family: var(--font-ui);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-neutral-700);
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238490a5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+      outline: none;
+    }
+
+    .select:hover {
+      border-color: var(--border-strong);
+    }
+
+    .select:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(74, 124, 170, 0.15);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      font-family: var(--font-ui);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      line-height: var(--leading-normal);
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+      white-space: nowrap;
+      height: 36px;
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .btn-primary {
+      background: var(--color-primary-700);
+      color: #fff;
+      border-color: var(--color-primary-700);
+    }
+    .btn-primary:hover {
+      background: var(--color-primary-800);
+      border-color: var(--color-primary-800);
+    }
+    .btn-primary:disabled, .btn-primary.is-disabled {
+      background: var(--color-primary-300);
+      border-color: var(--color-primary-300);
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .btn-secondary {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-800);
+      border-color: var(--border-default);
+    }
+    .btn-secondary:hover {
+      background: var(--color-neutral-200);
+      border-color: var(--border-strong);
+    }
+    .btn-secondary:disabled, .btn-secondary.is-disabled {
+      color: var(--color-neutral-400);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--color-primary-700);
+      border-color: var(--color-primary-300);
+    }
+    .btn-outline:hover {
+      background: var(--color-primary-50);
+      border-color: var(--color-primary-400);
+    }
+    .btn-outline:disabled, .btn-outline.is-disabled {
+      color: var(--color-neutral-400);
+      border-color: var(--border-default);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px var(--space-2);
+      font-size: var(--text-xs);
+      font-weight: var(--font-medium);
+      border-radius: var(--radius-sm);
+      line-height: var(--leading-normal);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge-default {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-600);
+    }
+
+    .badge-primary {
+      background: var(--color-primary-100);
+      color: var(--color-primary-700);
+    }
+
+    .badge-success {
+      background: var(--color-success-100);
+      color: var(--color-success-700);
+    }
+
+    .badge-warning {
+      background: var(--color-warning-100);
+      color: var(--color-warning-700);
+    }
+
+    /* ============================================================
+       MOBILE OVERLAY
+       ============================================================ */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg-overlay);
+      z-index: 90;
+    }
+
+    .sidebar-overlay.is-visible {
+      display: block;
+    }
+
+    /* ============================================================
+       CONTENT AREA — NO PADDING (steps manage their own)
+       ============================================================ */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ============================================================
+       STEP INDICATOR
+       ============================================================ */
+    .steps-wrap {
+      padding: var(--space-6) var(--space-6);
+      background: var(--bg-page);
+      flex-shrink: 0;
+    }
+
+    .steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .step-circle svg {
+      display: block;
+    }
+
+    .step.is-complete .step-circle {
+      background: var(--color-primary-700);
+      color: #fff;
+    }
+
+    .step.is-active .step-circle {
+      background: var(--color-primary-100);
+      color: var(--color-primary-700);
+      border: 2px solid var(--color-primary-400);
+    }
+
+    .step.is-upcoming .step-circle {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-400);
+      border: 1px solid var(--border-default);
+      cursor: default;
+    }
+
+    .step-label {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+    }
+
+    .step.is-complete .step-label { color: var(--color-primary-700); }
+    .step.is-active .step-label { color: var(--color-neutral-800); font-weight: var(--font-semibold); }
+    .step.is-upcoming .step-label { color: var(--color-neutral-400); }
+
+    .step-connector {
+      width: 40px;
+      height: 1px;
+      background: var(--border-default);
+      flex-shrink: 0;
+    }
+
+    .step-connector.is-complete {
+      background: var(--color-primary-300);
+    }
+
+    /* ============================================================
+       STEP PANELS
+       ============================================================ */
+    .step-panel {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .step-panel.is-active {
+      display: flex;
+    }
+
+    .step-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 var(--space-6) var(--space-6);
+    }
+
+    /* ============================================================
+       FOOTER BAR (shared across all steps)
+       ============================================================ */
+    .footer-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-6);
+      border-top: 1px solid var(--border-default);
+      background: var(--bg-card);
+    }
+
+    .footer-bar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-left: auto;
+    }
+
+    /* ============================================================
+       STEP 1: SELECT REFERENCES
+       ============================================================ */
+    .upload-area {
+      border: 2px dashed var(--color-neutral-300);
+      border-radius: var(--radius-xl);
+      padding: var(--space-10) var(--space-6);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .upload-area:hover {
+      border-color: var(--color-primary-400);
+      background: var(--color-primary-50);
+    }
+
+    .upload-area svg {
+      color: var(--color-primary-400);
+      margin-bottom: var(--space-3);
+    }
+
+    .upload-area-title {
+      font-size: var(--text-base);
+      font-weight: var(--font-medium);
+      color: var(--color-neutral-700);
+      margin-bottom: var(--space-1);
+    }
+
+    .upload-area-hint {
+      font-size: var(--text-sm);
+      color: var(--color-neutral-400);
+    }
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    .filter-row .search-input-wrap {
+      flex: 1;
+    }
+
+    .ref-columns {
+      display: flex;
+      gap: var(--space-4);
+    }
+
+    .ref-list {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .ref-item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-neutral-100);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .ref-item:last-child {
+      border-bottom: none;
+    }
+
+    .ref-item:hover {
+      background: var(--color-neutral-50);
+    }
+
+    .ref-item.is-checked {
+      background: var(--color-primary-50);
+    }
+
+    .ref-item-checkbox {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: var(--color-primary-700);
+      cursor: pointer;
+    }
+
+    .ref-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ref-item-name {
+      font-size: var(--text-base);
+      font-weight: var(--font-semibold);
+      color: var(--color-neutral-900);
+      line-height: var(--leading-snug);
+    }
+
+    .ref-item-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: 2px;
+      font-size: var(--text-xs);
+      color: var(--color-neutral-400);
+    }
+
+    .ref-item-preview {
+      font-size: var(--text-sm);
+      color: var(--color-neutral-500);
+      margin-top: var(--space-1);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Selected panel */
+    .selected-panel {
+      width: 280px;
+      flex-shrink: 0;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      background: var(--bg-card);
+      align-self: flex-start;
+    }
+
+    .selected-panel-header {
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-neutral-700);
+      margin-bottom: var(--space-3);
+    }
+
+    .selected-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      padding: var(--space-2) 0;
+    }
+
+    .selected-item + .selected-item {
+      border-top: 1px solid var(--color-neutral-100);
+    }
+
+    .selected-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      align-items: flex-start;
+    }
+
+    .selected-item-name {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-neutral-800);
+    }
+
+    .selected-item-remove {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--color-neutral-400);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+      font-size: var(--text-base);
+      transition: color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .selected-item-remove:hover {
+      color: var(--color-error-600);
+      background: var(--color-error-50);
+    }
+
+    .selected-empty {
+      font-size: var(--text-sm);
+      color: var(--color-neutral-400);
+      padding: var(--space-2) 0;
+    }
+
+    /* ============================================================
+       STEP 2: PROVIDE CONTEXT
+       ============================================================ */
+    .refs-summary {
+      background: var(--color-neutral-50);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-xl);
+      padding: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .refs-summary-title {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--color-neutral-600);
+      margin-bottom: var(--space-2);
+    }
+
+    .refs-summary-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .refs-summary-item {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--text-sm);
+      color: var(--color-neutral-800);
+    }
+
+    .refs-summary-item .badge {
+      margin-left: var(--space-2);
+    }
+
+    .context-label {
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-neutral-700);
+      margin-bottom: var(--space-1);
+    }
+
+    .context-helper {
+      font-size: var(--text-sm);
+      color: var(--color-neutral-400);
+      margin-bottom: var(--space-3);
+    }
+
+    /* ============================================================
+       STEP 3: REVIEW & SAVE
+       ============================================================ */
+    .phase-progress {
+      background: var(--color-neutral-50);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      max-width: 720px;
+      margin: 0 auto var(--space-6);
+    }
+
+    .phase-list {
+      display: flex;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    .phase-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--color-neutral-800);
+    }
+
+    .phase-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .phase-icon-check {
+      color: var(--color-success-700);
+    }
+
+    /* Doc viewer (reused from document-detail) */
+    .doc-viewer-wrap {
+      padding: 0;
+    }
+
+    .doc-viewer {
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 48px;
+      font-family: var(--font-document);
+      color: var(--color-neutral-900);
+      line-height: 1.7;
+      font-size: 17px;
+    }
+
+    .doc-viewer-title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: var(--font-bold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding-bottom: var(--space-4);
+      border-bottom: 2px solid var(--color-neutral-800);
+      margin-bottom: var(--space-8);
+    }
+
+    .doc-viewer-intro {
+      margin-bottom: var(--space-6);
+      text-align: justify;
+    }
+
+    .doc-viewer h2 {
+      font-size: 17px;
+      font-weight: var(--font-bold);
+      margin-top: 32px;
+      margin-bottom: var(--space-3);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .doc-viewer .section-body {
+      text-align: justify;
+    }
+
+    .doc-viewer .clause-number {
+      font-weight: var(--font-bold);
+    }
+
+    .signature-block {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-12);
+      margin-top: 48px;
+      padding-top: var(--space-8);
+    }
+
+    .signature-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .signature-line {
+      border-top: 1px solid var(--color-neutral-800);
+      padding-top: var(--space-2);
+      font-size: 15px;
+      font-weight: var(--font-bold);
+    }
+
+    .signature-fields {
+      margin-top: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      font-size: 15px;
+    }
+
+    .signature-field-line {
+      border-bottom: 1px solid var(--color-neutral-300);
+      padding-bottom: var(--space-1);
+      color: var(--color-neutral-500);
+      font-size: 14px;
+    }
+
+    /* ============================================================
+       MOBILE COLLAPSIBLE SELECTED SUMMARY (Step 1)
+       ============================================================ */
+    .mobile-selected-summary {
+      display: none;
+    }
+
+    /* ============================================================
+       RESPONSIVE — MOBILE (<768px)
+       ============================================================ */
+    @media (max-width: 767px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform var(--transition-slow);
+        box-shadow: none;
+      }
+
+      .sidebar.is-open {
+        transform: translateX(0);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .topbar-hamburger {
+        display: flex;
+      }
+
+      .topbar-search {
+        max-width: none;
+        width: 100%;
+      }
+
+      /* Step indicator: hide labels, circles only */
+      .step-label {
+        display: none;
+      }
+
+      .steps-wrap {
+        padding: var(--space-4) var(--space-4);
+      }
+
+      /* Step body padding */
+      .step-body {
+        padding: 0 var(--space-4) var(--space-4);
+      }
+
+      /* Footer bar */
+      .footer-bar {
+        padding: var(--space-3) var(--space-4);
+      }
+
+      /* Step 1: stack columns */
+      .ref-columns {
+        flex-direction: column;
+      }
+
+      .selected-panel {
+        display: none;
+      }
+
+      .mobile-selected-summary {
+        display: block;
+        background: var(--color-primary-50);
+        border: 1px solid var(--color-primary-100);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3) var(--space-4);
+        margin-bottom: var(--space-4);
+        font-size: var(--text-sm);
+        color: var(--color-primary-700);
+        font-weight: var(--font-medium);
+      }
+
+      /* Step 1 & 2 footer: back + next side by side, primary fills remaining */
+      .footer-bar .btn-primary {
+        flex: 1;
+      }
+
+      /* Step 3: doc viewer padding */
+      .doc-viewer-wrap {
+        padding: 0;
+      }
+
+      .doc-viewer {
+        padding: 24px;
+        font-size: 16px;
+      }
+
+      .doc-viewer-title {
+        font-size: 18px;
+      }
+
+      .signature-block {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+        margin-top: 32px;
+      }
+
+      /* Step 3 footer: export becomes icon-only */
+      .footer-bar .btn-export-text {
+        display: none;
+      }
+
+      .phase-list {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">LegalDoc AI</div>
+      <nav class="sidebar-nav">
+        <a href="#" class="sidebar-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+          Documents
+        </a>
+        <a href="#" class="sidebar-item is-active">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          New Document
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main area -->
+    <div class="main-area">
+      <!-- Topbar -->
+      <header class="topbar">
+        <button class="topbar-hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="topbar-center">
+          <div class="topbar-search search-input-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="input" placeholder="Search documents...">
+          </div>
+        </div>
+        <div class="topbar-avatar">JD</div>
+      </header>
+
+      <!-- Content area -->
+      <main class="content">
+        <!-- Step Indicator -->
+        <div class="steps-wrap">
+          <div class="steps">
+            <div class="step is-active" id="step-ind-1" data-step="1">
+              <div class="step-circle" onclick="goToStep(1)"><span class="step-number">1</span></div>
+              <span class="step-label">Select References</span>
+            </div>
+            <div class="step-connector" id="conn-1-2"></div>
+            <div class="step is-upcoming" id="step-ind-2" data-step="2">
+              <div class="step-circle" onclick="goToStep(2)"><span class="step-number">2</span></div>
+              <span class="step-label">Provide Context</span>
+            </div>
+            <div class="step-connector" id="conn-2-3"></div>
+            <div class="step is-upcoming" id="step-ind-3" data-step="3">
+              <div class="step-circle" onclick="goToStep(3)"><span class="step-number">3</span></div>
+              <span class="step-label">Review &amp; Save</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================
+             STEP 1: Select References
+             ============================================================ -->
+        <div class="step-panel is-active" id="panel-1">
+          <div class="step-body">
+            <!-- Upload area -->
+            <div class="upload-area">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div class="upload-area-title">Drag &amp; drop files here, or click to browse</div>
+              <div class="upload-area-hint">PDF, TXT supported</div>
+            </div>
+
+            <!-- Filter row -->
+            <div class="filter-row">
+              <div class="search-input-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="input" placeholder="Search references...">
+              </div>
+              <select class="select">
+                <option>All Types</option>
+                <option>Contract</option>
+                <option>Policy</option>
+                <option>Employment</option>
+              </select>
+            </div>
+
+            <!-- Mobile selected summary -->
+            <div class="mobile-selected-summary" id="mobileSelectedSummary">
+              <span id="mobileSelectedCount">2 references selected</span>
+            </div>
+
+            <!-- Two-column layout -->
+            <div class="ref-columns">
+              <!-- Reference list -->
+              <div class="ref-list">
+                <label class="ref-item is-checked">
+                  <input type="checkbox" class="ref-item-checkbox" checked data-name="NDA Template" data-type="Contract" onchange="toggleRef(this)">
+                  <div class="ref-item-content">
+                    <div class="ref-item-name">NDA Template</div>
+                    <div class="ref-item-preview">This template covers standard NDA terms and conditions for confidential...</div>
+                    <div class="ref-item-meta">
+                      <span class="badge badge-default">Contract</span>
+                      <span>Mar 20</span>
+                    </div>
+                  </div>
+                </label>
+                <label class="ref-item is-checked">
+                  <input type="checkbox" class="ref-item-checkbox" checked data-name="Service Agreement" data-type="Contract" onchange="toggleRef(this)">
+                  <div class="ref-item-content">
+                    <div class="ref-item-name">Service Agreement</div>
+                    <div class="ref-item-preview">Standard service terms and conditions for professional consulting...</div>
+                    <div class="ref-item-meta">
+                      <span class="badge badge-default">Contract</span>
+                      <span>Mar 15</span>
+                    </div>
+                  </div>
+                </label>
+                <label class="ref-item">
+                  <input type="checkbox" class="ref-item-checkbox" data-name="Privacy Policy Template" data-type="Policy" onchange="toggleRef(this)">
+                  <div class="ref-item-content">
+                    <div class="ref-item-name">Privacy Policy Template</div>
+                    <div class="ref-item-preview">Privacy policy for data collection and processing activities across...</div>
+                    <div class="ref-item-meta">
+                      <span class="badge badge-default">Policy</span>
+                      <span>Mar 10</span>
+                    </div>
+                  </div>
+                </label>
+                <label class="ref-item">
+                  <input type="checkbox" class="ref-item-checkbox" data-name="Employment Handbook" data-type="Employment" onchange="toggleRef(this)">
+                  <div class="ref-item-content">
+                    <div class="ref-item-name">Employment Handbook</div>
+                    <div class="ref-item-preview">Company employment policies and terms covering onboarding, benefits...</div>
+                    <div class="ref-item-meta">
+                      <span class="badge badge-default">Employment</span>
+                      <span>Feb 28</span>
+                    </div>
+                  </div>
+                </label>
+                <label class="ref-item">
+                  <input type="checkbox" class="ref-item-checkbox" data-name="Vendor Agreement" data-type="Contract" onchange="toggleRef(this)">
+                  <div class="ref-item-content">
+                    <div class="ref-item-name">Vendor Agreement</div>
+                    <div class="ref-item-preview">Vendor terms and conditions for supply of goods and services as...</div>
+                    <div class="ref-item-meta">
+                      <span class="badge badge-default">Contract</span>
+                      <span>Feb 20</span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Selected panel -->
+              <div class="selected-panel" id="selectedPanel">
+                <div class="selected-panel-header" id="selectedHeader">Selected (2)</div>
+                <div id="selectedList">
+                  <div class="selected-item" data-ref="NDA Template">
+                    <div class="selected-item-info">
+                      <span class="selected-item-name">NDA Template</span>
+                      <span class="badge badge-default">Contract</span>
+                    </div>
+                    <button class="selected-item-remove" onclick="removeRef('NDA Template')" title="Remove">&times;</button>
+                  </div>
+                  <div class="selected-item" data-ref="Service Agreement">
+                    <div class="selected-item-info">
+                      <span class="selected-item-name">Service Agreement</span>
+                      <span class="badge badge-default">Contract</span>
+                    </div>
+                    <button class="selected-item-remove" onclick="removeRef('Service Agreement')" title="Remove">&times;</button>
+                  </div>
+                </div>
+                <div class="selected-empty" id="selectedEmpty" style="display:none;">No references selected</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer-bar">
+            <button class="btn btn-secondary" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              Back
+            </button>
+            <div class="footer-bar-right">
+              <button class="btn btn-primary" onclick="goToStep(2)">
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================
+             STEP 2: Provide Context
+             ============================================================ -->
+        <div class="step-panel" id="panel-2">
+          <div class="step-body">
+            <!-- References summary -->
+            <div class="refs-summary">
+              <div class="refs-summary-title">Using 2 references:</div>
+              <div class="refs-summary-list">
+                <span class="refs-summary-item">NDA Template <span class="badge badge-default">Contract</span><span>,</span></span>
+                <span class="refs-summary-item">Service Agreement <span class="badge badge-default">Contract</span></span>
+              </div>
+            </div>
+
+            <!-- Context input -->
+            <div class="context-label">Describe what you need</div>
+            <div class="context-helper">Include the parties, purpose, specific terms, and any questions you want addressed.</div>
+            <textarea class="input" style="min-height: 200px;">I need a non-disclosure agreement between Acme Corp (disclosing party) and Widget Inc (receiving party). The agreement should cover proprietary software designs and trade secrets. Term should be 2 years. Include a non-compete clause for 12 months after termination.</textarea>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer-bar">
+            <button class="btn btn-secondary" onclick="goToStep(1)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              Back
+            </button>
+            <div class="footer-bar-right">
+              <button class="btn btn-primary" onclick="goToStep(3)">
+                Generate Document
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================
+             STEP 3: Review & Save
+             ============================================================ -->
+        <div class="step-panel" id="panel-3">
+          <div class="step-body">
+            <!-- Phase progress -->
+            <div class="phase-progress">
+              <div class="phase-list">
+                <div class="phase-item">
+                  <div class="phase-icon phase-icon-check">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  Analyzing references
+                </div>
+                <div class="phase-item">
+                  <div class="phase-icon phase-icon-check">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  Structuring document
+                </div>
+                <div class="phase-item">
+                  <div class="phase-icon phase-icon-check">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  Drafting sections
+                </div>
+                <div class="phase-item">
+                  <div class="phase-icon phase-icon-check">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  Finalizing
+                </div>
+              </div>
+            </div>
+
+            <!-- Document viewer -->
+            <div class="doc-viewer-wrap">
+              <div class="doc-viewer">
+                <h1 class="doc-viewer-title">Non-Disclosure Agreement</h1>
+
+                <p class="doc-viewer-intro">
+                  This Non-Disclosure Agreement (the "Agreement") is entered into as of March 27, 2026
+                  (the "Effective Date"), by and between <strong>Acme Corp</strong> (the "Disclosing Party") and
+                  <strong>Widget Inc</strong> (the "Receiving Party"), collectively referred to as the "Parties,"
+                  for the purpose of preventing the unauthorized disclosure of Confidential Information
+                  as defined below.
+                </p>
+
+                <h2><span class="clause-number">1.</span> Definitions</h2>
+                <p class="section-body">
+                  "Confidential Information" means any data or information, oral or written, disclosed
+                  by the Disclosing Party to the Receiving Party, that is designated as confidential
+                  or that reasonably should be understood to be confidential given the nature of the
+                  information and the circumstances of disclosure. Confidential Information includes,
+                  but is not limited to, proprietary software designs, trade secrets, business plans,
+                  financial information, technical data, product designs, customer lists, and
+                  marketing strategies.
+                </p>
+
+                <h2><span class="clause-number">2.</span> Obligations</h2>
+                <p class="section-body">
+                  The Receiving Party shall hold and maintain the Confidential Information of the
+                  Disclosing Party in strict confidence for the sole and exclusive benefit of the
+                  Disclosing Party. The Receiving Party shall not, without the prior written approval
+                  of the Disclosing Party, use for the Receiving Party's own benefit, publish, copy,
+                  or otherwise disclose to others, or permit the use by others for their benefit or
+                  to the detriment of the Disclosing Party, any Confidential Information.
+                </p>
+
+                <h2><span class="clause-number">3.</span> Non-Compete</h2>
+                <p class="section-body">
+                  For a period of twelve (12) months following the termination of this Agreement,
+                  the Receiving Party agrees not to engage in any business activity that directly
+                  competes with the Disclosing Party's business, nor to solicit any of the Disclosing
+                  Party's clients, customers, or employees with whom the Receiving Party had contact
+                  during the term of this Agreement.
+                </p>
+
+                <h2><span class="clause-number">4.</span> Term</h2>
+                <p class="section-body">
+                  This Agreement shall remain in effect for a period of two (2) years from the
+                  Effective Date, unless earlier terminated by either Party upon thirty (30) days
+                  written notice to the other Party. The obligations of the Receiving Party with
+                  respect to Confidential Information disclosed during the term of this Agreement
+                  shall survive termination for an additional period of two (2) years.
+                </p>
+
+                <!-- Signature block -->
+                <div class="signature-block">
+                  <div class="signature-item">
+                    <div class="signature-line">Disclosing Party — Acme Corp</div>
+                    <div class="signature-fields">
+                      <div class="signature-field-line">Signature</div>
+                      <div class="signature-field-line">Printed Name</div>
+                      <div class="signature-field-line">Date</div>
+                    </div>
+                  </div>
+                  <div class="signature-item">
+                    <div class="signature-line">Receiving Party — Widget Inc</div>
+                    <div class="signature-fields">
+                      <div class="signature-field-line">Signature</div>
+                      <div class="signature-field-line">Printed Name</div>
+                      <div class="signature-field-line">Date</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer / Action bar -->
+          <div class="footer-bar">
+            <button class="btn btn-secondary" onclick="goToStep(2)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+              Back
+            </button>
+            <div class="footer-bar-right">
+              <button class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save
+              </button>
+              <button class="btn btn-outline">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span class="btn-export-text">Export PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================
+       SIDEBAR (mobile)
+       ============================================================ */
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('is-open');
+      document.getElementById('sidebarOverlay').classList.toggle('is-visible');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('is-open');
+      document.getElementById('sidebarOverlay').classList.remove('is-visible');
+    }
+
+    /* ============================================================
+       STEP NAVIGATION
+       ============================================================ */
+    var currentStep = 1;
+    var maxVisited = 1;
+
+    function goToStep(n) {
+      // Can only navigate to steps we've already visited (or the next one)
+      if (n < 1 || n > 3) return;
+      if (n > maxVisited + 1) return;
+
+      currentStep = n;
+      if (n > maxVisited) maxVisited = n;
+
+      // Update panels
+      document.querySelectorAll('.step-panel').forEach(function(p) {
+        p.classList.remove('is-active');
+      });
+      document.getElementById('panel-' + n).classList.add('is-active');
+
+      // Update step indicator
+      updateStepIndicator();
+    }
+
+    function updateStepIndicator() {
+      for (var i = 1; i <= 3; i++) {
+        var stepEl = document.getElementById('step-ind-' + i);
+        var circleSpan = stepEl.querySelector('.step-number');
+        stepEl.classList.remove('is-active', 'is-complete', 'is-upcoming');
+
+        if (i < currentStep || (i <= maxVisited && i !== currentStep)) {
+          // Completed
+          stepEl.classList.add('is-complete');
+          circleSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        } else if (i === currentStep) {
+          // Step 3 shows as complete (all done) per spec
+          if (i === 3) {
+            stepEl.classList.add('is-complete');
+            circleSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          } else {
+            stepEl.classList.add('is-active');
+            circleSpan.textContent = i;
+          }
+        } else {
+          stepEl.classList.add('is-upcoming');
+          circleSpan.textContent = i;
+        }
+      }
+
+      // Connectors
+      var conn12 = document.getElementById('conn-1-2');
+      var conn23 = document.getElementById('conn-2-3');
+
+      conn12.classList.toggle('is-complete', maxVisited >= 2);
+      conn23.classList.toggle('is-complete', maxVisited >= 3);
+    }
+
+    /* ============================================================
+       REFERENCE SELECTION (Step 1)
+       ============================================================ */
+    function toggleRef(checkbox) {
+      var item = checkbox.closest('.ref-item');
+      var name = checkbox.getAttribute('data-name');
+      var type = checkbox.getAttribute('data-type');
+
+      if (checkbox.checked) {
+        item.classList.add('is-checked');
+        addToSelected(name, type);
+      } else {
+        item.classList.remove('is-checked');
+        removeFromSelected(name);
+      }
+      updateSelectedCount();
+    }
+
+    function addToSelected(name, type) {
+      var list = document.getElementById('selectedList');
+      var empty = document.getElementById('selectedEmpty');
+      empty.style.display = 'none';
+
+      var div = document.createElement('div');
+      div.className = 'selected-item';
+      div.setAttribute('data-ref', name);
+      div.innerHTML =
+        '<div class="selected-item-info">' +
+          '<span class="selected-item-name">' + name + '</span>' +
+          '<span class="badge badge-default">' + type + '</span>' +
+        '</div>' +
+        '<button class="selected-item-remove" onclick="removeRef(\'' + name + '\')" title="Remove">&times;</button>';
+      list.appendChild(div);
+    }
+
+    function removeFromSelected(name) {
+      var item = document.querySelector('#selectedList .selected-item[data-ref="' + name + '"]');
+      if (item) item.remove();
+
+      var list = document.getElementById('selectedList');
+      var empty = document.getElementById('selectedEmpty');
+      if (list.children.length === 0) {
+        empty.style.display = 'block';
+      }
+    }
+
+    function removeRef(name) {
+      // Uncheck the checkbox
+      var checkboxes = document.querySelectorAll('.ref-item-checkbox');
+      checkboxes.forEach(function(cb) {
+        if (cb.getAttribute('data-name') === name) {
+          cb.checked = false;
+          cb.closest('.ref-item').classList.remove('is-checked');
+        }
+      });
+      removeFromSelected(name);
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      var count = document.querySelectorAll('#selectedList .selected-item').length;
+      document.getElementById('selectedHeader').textContent = 'Selected (' + count + ')';
+      document.getElementById('mobileSelectedCount').textContent = count + ' reference' + (count !== 1 ? 's' : '') + ' selected';
+    }
+  </script>
+</body>
+</html>
