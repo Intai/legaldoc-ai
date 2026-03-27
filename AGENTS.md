@@ -17,7 +17,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 - `Ruff` for Python linting and formatting.
 - `FastAPI` for REST API endpoints.
 - `LangGraph` for AI workflow orchestration.
-- `MongoDB` for document storage.
+- `MongoDB` and `Beanie` for document storage.
 - `pytest` for unit testing and coverage.
 
 ### DevOps
@@ -51,7 +51,7 @@ legaldoc-ai/
 │   │   ├── config.py
 │   │   └── dependencies.py
 │   ├── db/
-│   ├── schemas/
+│   ├── models/
 │   ├── tests/
 │   ├── main.py
 │   └── pyproject.toml
@@ -115,7 +115,7 @@ legaldoc-ai/
 ### API
 
 - RESTful endpoints under `/api/v1/`.
-- Resource naming in plural kebab-case (e.g. `/api/v1/legal-documents`).
+- Resource naming in plural kebab-case (e.g. `/api/v1/documents`).
 - Standard HTTP methods: GET (list/read), POST (create), PUT (update), DELETE (remove).
 - Response format: `{ "data": ..., "error": null }` on success, `{ "data": null, "error": { "message": "...", "code": "..." } }` on failure.
 - Standard HTTP status codes: 200, 201, 400, 404, 422, 500.

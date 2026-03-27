@@ -33,7 +33,7 @@ to show structure, proportions, and information hierarchy.
 - Nav items use `sidebar-item` pattern: icon + label, 14px medium weight.
 - Active nav item gets `bg-sidebar-active` (#eef3f8) and primary-700 text.
 - Topbar is 56px tall, white background, border-bottom.
-- Search input is 280px wide on the left side of the topbar.
+- Search input is 280px wide on the left side of the topbar. Placeholder-only for MVP — visible but non-functional.
 - User avatar (32px circle) sits on the right side of the topbar.
 - Content area fills remaining space, has 24px padding and vertical scroll.
 
@@ -150,13 +150,109 @@ Active nav: **Documents**
   - At wide viewports: 3 columns. At medium: 2 columns. At narrow: 1 column.
 - Each card uses the `card` component: white bg, border, 8px radius, 20px padding.
 - Card title row: title (16px semibold) + status badge, flex space-between.
-  - Status badge uses color variants: `badge-success` for Complete, `badge-warning`
+  - Status badge uses color variants: `badge-success` for Done, `badge-warning`
     for Draft, `badge-primary` for Generating.
 - Card description: 2-line clamp snippet (14px, neutral-500).
 - Card meta row (bottom): type badge + date + page count (12px, neutral-400).
   - Type badge uses `badge-default` for all document types (NDA, Contract, Policy, etc.).
 - Entire card is clickable, navigating to the document detail view.
 - Hover state: `shadow-md` + stronger border.
+- Below the card grid, a centered "Load more" button fetches the next page of results.
+  The button is hidden when all documents have been loaded.
+
+### Documents -- Load More
+
+```
++------------------+------------------------------------------------------------------------------------------------+
+|                  |  [Search icon] [Search............]                                                  [JD]      |
+|  LegalDoc AI     +------------------------------------------------------------------------------------------------+
+|                  |                                                                                                |
+| >Documents       |  Documents                                                                       (page title)  |
+|  New Document    |                                                                                                |
+|                  |  [Sort: Most Recent v]  [Type: All Types v]                                       (controls)   |
+|                  |                                                                                                |
+|                  |  +---------------------------+ +---------------------------+ +---------------------------+     |
+|                  |  | NDA                  Done | | Employment          Draft | | Service             Draft |     |
+|                  |  | ...                       | | ...                       | | ...                       |     |
+|                  |  +---------------------------+ +---------------------------+ +---------------------------+     |
+|                  |                                                                                                |
+|                  |                                     [ Load more ]                                              |
+|                  |                                                                                                |
++------------------+------------------------------------------------------------------------------------------------+
+```
+
+**Annotations**
+
+- "Load more" button uses `button-outline` variant, centered below the card grid with 24px top margin.
+- While fetching the next page, the button label changes to a spinner icon and the button is disabled.
+- The button is hidden when all documents have been loaded (no more pages).
+
+### Documents -- Empty State
+
+Shown when no documents exist, or when the active filter returns zero results.
+
+```
++------------------+-----------------------------------------------------------------------------------+
+|                  |  [Search icon] [Search............]                                     [JD]      |
+|  LegalDoc AI     +-----------------------------------------------------------------------------------+
+|                  |                                                                                   |
+| >Documents       |  Documents                                                          (page title)  |
+|  New Document    |                                                                                   |
+|                  |  [Sort: Most Recent v]  [Type: All Types v]                          (controls)   |
+|                  |                                                                                   |
+|                  |         +--------------------------------------------------+                      |
+|                  |         |                                                  |                      |
+|                  |         |              No documents yet.                   |                      |
+|                  |         |   Create your first document to get started.     |                      |
+|                  |         |                                                  |                      |
+|                  |         |            [ + New Document ]                    |                      |
+|                  |         |                                                  |                      |
+|                  |         +--------------------------------------------------+                      |
+|                  |                                                                                   |
++------------------+-----------------------------------------------------------------------------------+
+```
+
+**Annotations**
+
+- Empty state is centered horizontally and vertically in the content area.
+- Primary message: "No documents yet." (16px, semibold, neutral-700).
+- Secondary message: "Create your first document to get started." (14px, neutral-500).
+- CTA button uses the `button-primary` variant and navigates to the New Document flow.
+- When the empty state is caused by a filter returning zero results, the messages change to:
+  "No documents match your filters." / "Try adjusting your filters."
+  The CTA button is hidden in the filter-empty variant.
+
+### Documents -- Loading State
+
+Shown while documents are being fetched from the API.
+
+```
++------------------+------------------------------------------------------------------------------------------------+
+|                  |  [Search icon] [Search............]                                                  [JD]      |
+|  LegalDoc AI     +------------------------------------------------------------------------------------------------+
+|                  |                                                                                                |
+| >Documents       |  Documents                                                                       (page title)  |
+|  New Document    |                                                                                                |
+|                  |  [Sort: Most Recent v]  [Type: All Types v]                                       (controls)   |
+|                  |                                                                                                |
+|                  |  +---------------------------+ +---------------------------+ +---------------------------+     |
+|                  |  | ████████████         ████ | | ████████████         ████ | | ████████████         ████ |     |
+|                  |  |                           | |                           | |                           |     |
+|                  |  | ████████████████████████  | | ████████████████████████  | | ████████████████████████  |     |
+|                  |  | █████████████████         | | █████████████████         | | █████████████████         |     |
+|                  |  |                           | |                           | |                           |     |
+|                  |  | ████  ██████████  ████    | | ████  ██████████  ████    | | ████  ██████████  ████    |     |
+|                  |  +---------------------------+ +---------------------------+ +---------------------------+     |
+|                  |                                                                                                |
++------------------+------------------------------------------------------------------------------------------------+
+```
+
+**Annotations**
+
+- Display 6 skeleton cards (or fewer to fill the viewport) using the same grid layout as the loaded state.
+- Each skeleton card mirrors the card anatomy: a title bar, two description lines, and a meta row,
+  all rendered as `animate-pulse` blocks with `bg-neutral-200` and rounded corners.
+- Sort and type filter dropdowns are visible but disabled during loading.
 
 ---
 
