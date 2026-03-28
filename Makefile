@@ -17,3 +17,5 @@ dev-stop: ## Stop development environment
 
 db-seed: ## Seed the database
 	docker compose exec api python -m api.db.seed
+
+reseed: db-seed ## Alias for db-seed
