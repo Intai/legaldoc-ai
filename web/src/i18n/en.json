@@ -1,0 +1,38 @@
+{
+  "app": {
+    "logo": "LegalDoc AI",
+    "toggleMenu": "Toggle menu"
+  },
+  "documents": {
+    "title": "Documents",
+    "sortMostRecent": "Most Recent",
+    "sortAlphabetical": "A-Z",
+    "filterAllTypes": "All Types",
+    "filterContract": "Contract",
+    "filterPolicy": "Policy",
+    "filterEmployment": "Employment",
+    "filterNda": "NDA",
+    "statusDone": "Done",
+    "statusDraft": "Draft",
+    "statusGenerating": "Generating",
+    "pages": "{{count}} pages",
+    "emptyTitle": "No documents yet.",
+    "emptyDescription": "Create your first document to get started.",
+    "emptyNewDocument": "New Document",
+    "emptyFilterTitle": "No documents match your filters.",
+    "emptyFilterDescription": "Try adjusting your filters.",
+    "loadMore": "Load more"
+  },
+  "nav": {
+    "documents": "Documents",
+    "newDocument": "New Document"
+  },
+  "search": {
+    "placeholder": "Search..."
+  },
+  "error": {
+    "dialogTitle": "Something went wrong",
+    "dialogDescription": "An unexpected error occurred. Please try again later.",
+    "dialogClose": "Close"
+  }
+}

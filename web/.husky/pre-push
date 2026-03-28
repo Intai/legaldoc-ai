@@ -1,0 +1,7 @@
+cd web
+npm run lint
+npm test -- --passWithNoTests
+
+cd ..
+.venv/bin/ruff check api/
+.venv/bin/pytest api/tests/ --tb=short -q

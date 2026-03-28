@@ -52,7 +52,7 @@ As a user, I want to see a list of my saved legal documents so that I can browse
 
 15. Use frontend-developer subagent to create the Vite config @web/vite.config.js. Configure the React plugin (`@vitejs/plugin-react`) and the Tailwind CSS plugin (`@tailwindcss/vite`).
 16. Use frontend-developer subagent to create the Tailwind CSS entry point @web/src/index.css. Add Tailwind directives (`@import "tailwindcss"`) and define custom theme tokens (colors, fonts, spacing) from docs/style-guide.html as CSS custom properties.
-17. Use frontend-developer subagent to set up React Router @web/src/components/app.jsx. Install `react-router-dom`, configure a `BrowserRouter` with routes for `/` (documents page) and `/documents/:id` (document detail placeholder). Export the App component that wraps routes inside the app shell.
+17. Use frontend-developer subagent to set up React Router @web/src/components/app.jsx. Install `react-router-dom`, configure a `BrowserRouter` with routes for `/` (documents page) and `/documents/:id` (document detail placeholder). Export the App component.
 18. Use frontend-developer subagent to set up i18next initialisation @web/src/i18n/index.js. Configure i18next with the `react-i18next` integration, English as the default and fallback language, and import the translation namespace from @web/src/i18n/en.json.
 19. Use frontend-developer subagent to set up frontend config files @web/src/config/default.js, @web/src/config/production.js, and @web/src/config/test.js. Export environment-specific settings (e.g., API base URL). Use Vite's `import.meta.env.MODE` to select the active config.
 20. Use frontend-developer subagent to create a global dialog store @web/src/stores/dialog-store.js. Use Zustand to manage dialog state: open flag, title, description, and variant. Implement a `error` action that receives an API error response `{ message, code }` and maps it to a user-friendly dialog title and description. Implement a `close` action that resets the state.
@@ -63,7 +63,7 @@ As a user, I want to see a list of my saved legal documents so that I can browse
 
 **After tasks 15-16 complete:**
 
-22. Use frontend-developer subagent to initialise shadcn/ui by running `npx shadcn@latest init` to generate @web/components.json, then install components: card, badge, select, input, button, avatar, dialog, and skeleton into @web/src/shadcn/. Configure shadcn with the project's Tailwind setup and design tokens from docs/style-guide.html.
+22. Use frontend-developer subagent to initialise shadcn/ui by running `npx shadcn@latest init` to generate @web/components.json, then install components: card, badge, select, input, button, avatar, dialog, skeleton, and sidebar into @web/src/shadcn/. Configure shadcn with the project's Tailwind setup and design tokens from docs/style-guide.html.
 
 **After task 20 completes:**
 
@@ -71,7 +71,7 @@ As a user, I want to see a list of my saved legal documents so that I can browse
 
 **Parallel after task 22 completes:**
 
-24. Use frontend-developer subagent to scaffold the React app shell with sidebar and topbar @web/src/components/app-shell.jsx. Implement the sidebar (240px, logo, nav items with icons), topbar (56px, search input, user avatar), and main content area layout. Include mobile hamburger toggle with overlay. Follow the layout from docs/documents-layout.md and styles from docs/documents-ui-design.html.
+24. Use frontend-developer subagent to scaffold the React app shell @web/src/components/app-shell.jsx using shadcn's Sidebar component. Wrap the layout in SidebarProvider with a Sidebar (logo in SidebarHeader, nav items using SidebarMenu with NavLink) and SidebarInset (topbar with SidebarTrigger, search input, user avatar, and main content area). Follow the layout from docs/documents-layout.md and styles from docs/documents-ui-design.html. Wire AppShell into @web/src/components/app.jsx by wrapping the routes inside the app shell.
 25. Use frontend-developer subagent to create a global dialog component @web/src/components/global-dialog.jsx. Use shadcn's Dialog component, reading open/title/description from the dialog store. Render the dialog with a close button that calls the store's `close` action. Mount this component once in the app shell so it is available on every page.
 
 **After task 11 completes:**

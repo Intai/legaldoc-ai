@@ -2,17 +2,27 @@ import js from '@eslint/js'
 import { defineConfig, globalIgnores } from 'eslint/config'
 import importPlugin from 'eslint-plugin-import'
 import reactPlugin from 'eslint-plugin-react'
+import globals from 'globals'
 
 const eslintConfig = defineConfig([
   js.configs.recommended,
   globalIgnores([
-    'build/**',
+    'dist/**',
     'node_modules/**',
     '**/docs/*',
-    'shadcn/**',
+    '**/shadcn/**',
     '{.venv,venv}/**',
     'htmlcov/**',
   ]), {
+    files: ['**/*.{js,jsx,mjs}'],
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+      globals: {
+        ...globals.browser,
+      },
+    },
     plugins: {
       import: importPlugin,
       react: reactPlugin,
@@ -62,7 +72,9 @@ const eslintConfig = defineConfig([
 
       // React specific
       'react/jsx-filename-extension': ['warn', { extensions: ['.jsx'] }],
-      'react/react-in-jsx-scope': 'warn',
+      'react/react-in-jsx-scope': 'off',
+      'react/jsx-uses-react': 'warn',
+      'react/jsx-uses-vars': 'warn',
 
       // Import order enforcement
       'import/order': ['error', {
@@ -121,15 +133,9 @@ const eslintConfig = defineConfig([
     ],
     languageOptions: {
       globals: {
-        describe: 'readonly',
-        it: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        jest: 'readonly',
+        ...globals.browser,
+        ...globals.jest,
+        ...globals.node,
       },
     },
     rules: {
