@@ -43,11 +43,13 @@ function DocumentsPage() {
   const isFiltered = typeFilter !== 'all'
 
   useEffect(() => {
-    fetchDocuments()
-  }, [fetchDocuments])
+    if (documents.length <= 0) {
+      fetchDocuments()
+    }
+  }, [])
 
   return (
-    <div>
+    <div className="p-6 max-md:p-4">
       <h1
         className="text-3xl font-semibold text-neutral-900 leading-tight tracking-tight"
         data-testid="page-title"

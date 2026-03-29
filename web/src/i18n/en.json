@@ -21,7 +21,10 @@
     "emptyNewDocument": "New Document",
     "emptyFilterTitle": "No documents match your filters.",
     "emptyFilterDescription": "Try adjusting your filters.",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "backToDocuments": "Back to Documents",
+    "exportPdf": "Export PDF",
+    "created": "Created"
   },
   "nav": {
     "documents": "Documents",

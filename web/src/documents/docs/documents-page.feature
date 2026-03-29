@@ -82,7 +82,7 @@ Feature: Documents Page
   # ──────────────────────────────────────────────
 
   Scenario: DP-05 - Show skeleton cards while loading
-    Given the browser uses "waitForTimeout" to delay route "api/v1/documents" for "60" seconds
+    Given the browser uses "page.waitForTimeout" to delay route "api/v1/documents" for "300" seconds
     When I navigate to the documents page at "/"
     Then I should see 6 skeleton cards with animated pulse effect
     And the sort dropdown should be visible but disabled
@@ -126,7 +126,7 @@ Feature: Documents Page
   Scenario: DP-08 - Show load more button when more pages are available
     When I navigate to the documents page at "/"
     Then I should see a "Load more" button centered below the card grid
-    When the browser uses "waitForTimeout" to delay route "api/v1/documents" for "60" seconds
+    When the browser uses "page.waitForTimeout" to delay route "api/v1/documents" for "300" seconds
     And I click the "Load more" button
     Then the button label should change to a spinner
     And the button should be disabled
@@ -142,7 +142,7 @@ Feature: Documents Page
   Scenario: DP-09 - Show error dialog when document list API fails
     When I navigate to the documents page at "/"
     Then I should see the sort dropdown
-    When the browser network speed is offline
+    When the browser network is offline
     And I select "A-Z" from the sort dropdown
     Then a global error dialog should appear
     And the dialog should display a title and description
@@ -153,7 +153,7 @@ Feature: Documents Page
   Scenario: DP-10 - Show error dialog when load more API fails
     When I navigate to the documents page at "/"
     Then I should see a "Load more" button
-    When the browser network speed is offline
+    When the browser network is offline
     And I click the "Load more" button
     Then a global error dialog should appear
     When I click the close button on the dialog

@@ -15,7 +15,7 @@ As a user, I want to view a document's details and its PDF content so that I can
 **Parallel tasks 1-7:**
 
 1. Use backend-developer subagent to add a `pdf_content` bytes field to the document model @api/models/document.py.
-2. Use backend-developer subagent to add `DocumentDetailData` and `DocumentDetailResponse` schemas @api/schemas/document.py. `DocumentDetailData` wraps the existing `DocumentResponse`. `DocumentDetailResponse` follows the standard `{ data, error }` envelope.
+2. Use backend-developer subagent to add `DocumentDetailResponse` schema @api/schemas/document.py. `DocumentDetailResponse` wraps `DocumentResponse` directly in the standard `{ data, error }` envelope.
 3. Use frontend-developer subagent to create document detail store @web/src/stores/document-detail-store.js. Add `fetchDocument(id)` action that calls `GET /v1/documents/{id}`. Store document metadata keyed by ID to avoid duplicates across navigations.
 4. Use frontend-developer subagent to install `react-pdf` and `pdfjs-dist` @web/package.json. Configure the PDF.js worker in @web/src/components/app.jsx.
 5. Use frontend-developer subagent to create loading skeleton component @web/src/documents/components/document-detail-skeleton.jsx. Follow the skeleton structure from `docs/document-detail-loading-ui-design.html`. Use the `Skeleton` component from @web/src/shadcn/ui/skeleton.jsx, following the same pattern as @web/src/documents/components/skeleton-grid.jsx. Render the skeleton from the document detail page component while the document detail store is loading.

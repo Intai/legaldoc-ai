@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from enum import StrEnum
+from typing import Optional
 
 import pymongo
 from beanie import Document as BeanieDocument
@@ -35,6 +36,7 @@ class DocumentModel(BeanieDocument):
         description: A brief summary of the document.
         created_at: Timestamp when the document was created (UTC).
         page_count: Number of pages in the document.
+        pdf_content: Raw PDF bytes for the document.
     """
 
     title: str
@@ -45,6 +47,7 @@ class DocumentModel(BeanieDocument):
         default_factory=lambda: datetime.now(timezone.utc),
     )
     page_count: int
+    pdf_content: Optional[bytes] = None
 
     class Settings:
         """Beanie collection configuration."""

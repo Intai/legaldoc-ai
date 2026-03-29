@@ -133,9 +133,15 @@ describe('DocumentsPage', () => {
     expect(screen.getByText('Privacy Policy')).toBeInTheDocument()
   })
 
-  it('calls fetchDocuments on mount', () => {
+  it('calls fetchDocuments on mount when no documents loaded', () => {
+    mockStoreState = buildStoreState({ documents: [] })
     render(<DocumentsPage />)
     expect(mockFetchDocuments).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips fetchDocuments on mount when documents already loaded', () => {
+    render(<DocumentsPage />)
+    expect(mockFetchDocuments).not.toHaveBeenCalled()
   })
 
   it('triggers setSort when a sort option is clicked', () => {

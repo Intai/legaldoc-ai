@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink } from 'react-router-dom'
+import { Link, matchPath, useLocation } from 'react-router-dom'
 import { FileText, Plus, Search } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/shadcn/ui/avatar'
 import { Input } from '@/shadcn/ui/input'
@@ -20,18 +20,21 @@ import {
 } from '@/shadcn/ui/sidebar'
 
 const NAV_ITEMS = [
-  { to: '/', icon: FileText, labelKey: 'nav.documents' },
+  { to: '/', icon: FileText, labelKey: 'nav.documents', matchPaths: ['/', '/documents/:id'] },
   { to: '/documents/new', icon: Plus, labelKey: 'nav.newDocument' },
 ]
 
-function SidebarNavLink({ to, end, children }) {
+function SidebarNavLink({ to, matchPaths, children }) {
   const { setOpenMobile } = useSidebar()
+  const { pathname } = useLocation()
+  const isActive = matchPaths
+    ? matchPaths.some(pattern => matchPath(pattern, pathname))
+    : matchPath(to, pathname)
 
   return (
-    <NavLink
+    <Link
       to={to}
-      end={end}
-      className={({ isActive }) => [
+      className={[
         'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors',
         isActive
           ? 'bg-sidebar-accent font-semibold text-sidebar-accent-foreground'
@@ -40,7 +43,7 @@ function SidebarNavLink({ to, end, children }) {
       onClick={() => setOpenMobile(false)}
     >
       {children}
-    </NavLink>
+    </Link>
   )
 }
 
@@ -48,7 +51,7 @@ function AppShell({ children }) {
   const { t } = useTranslation()
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh overflow-hidden">
       <Sidebar data-testid="sidebar">
         <SidebarHeader>
           <div className="px-3 py-3 -mt-1 mb-2 text-lg font-bold text-sidebar-primary">
@@ -59,10 +62,10 @@ function AppShell({ children }) {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu data-testid="sidebar-nav">
-                {NAV_ITEMS.map(({ to, icon: Icon, labelKey }) => (
+                {NAV_ITEMS.map(({ to, icon: Icon, labelKey, matchPaths }) => (
                   <SidebarMenuItem key={to}>
                     <SidebarMenuButton asChild>
-                      <SidebarNavLink to={to} end={to === '/'}>
+                      <SidebarNavLink to={to} matchPaths={matchPaths}>
                         <Icon className="size-[18px] shrink-0" />
                         {t(labelKey)}
                       </SidebarNavLink>
@@ -75,12 +78,12 @@ function AppShell({ children }) {
         </SidebarContent>
       </Sidebar>
 
-      <SidebarInset>
+      <SidebarInset className="min-h-0">
         <header
           className="flex h-14 shrink-0 items-center gap-3 border-b border-border-default bg-bg-card px-5"
           data-testid="topbar"
         >
-          <SidebarTrigger className="md:hidden [&_svg]:size-5!" data-testid="sidebar-trigger" />
+          <SidebarTrigger className="lg:hidden [&_svg]:size-5!" data-testid="sidebar-trigger" />
 
           <div className="flex-1">
             <div className="relative max-w-[280px] max-md:max-w-none max-md:w-full">
@@ -99,7 +102,7 @@ function AppShell({ children }) {
           </Avatar>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 max-md:p-4">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </SidebarInset>

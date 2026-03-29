@@ -13,6 +13,7 @@ dependencies = [
     "beanie>=1.26,<2",
     "pydantic",
     "pydantic-settings",
+    "reportlab",
 ]
 
 [project.optional-dependencies]

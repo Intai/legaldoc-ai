@@ -63,3 +63,15 @@ class DocumentListResponse(BaseModel):
 
     data: DocumentListData | None = None
     error: ErrorDetail | None = None
+
+
+class DocumentDetailResponse(BaseModel):
+    """Top-level response for the document detail endpoint.
+
+    Attributes:
+        data: The document data, or None on error.
+        error: The error detail, or None on success.
+    """
+
+    data: DocumentResponse | None = None
+    error: ErrorDetail | None = None

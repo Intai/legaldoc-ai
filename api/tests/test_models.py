@@ -25,6 +25,20 @@ class TestDocumentModel:
         assert doc.status == DocumentStatus.DRAFT
         assert doc.description == "A standard service agreement."
         assert doc.page_count == 5
+        assert doc.pdf_content is None
+
+    async def test_create_with_pdf_content(self, beanie_db):
+        """Test model creation with pdf_content bytes."""
+        pdf_bytes = b"%PDF-1.4 sample content"
+        doc = DocumentModel(
+            title="Policy Doc",
+            type=DocumentType.POLICY,
+            status=DocumentStatus.DONE,
+            description="A policy with PDF.",
+            page_count=10,
+            pdf_content=pdf_bytes,
+        )
+        assert doc.pdf_content == pdf_bytes
 
     async def test_default_created_at(self, beanie_db):
         """Test that created_at defaults to approximately now in UTC."""

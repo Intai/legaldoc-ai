@@ -1,17 +1,18 @@
 import { render, screen } from '@testing-library/react'
 
-let mockNavLinkProps = []
+let mockPathname = '/'
 
 jest.mock('react-router-dom', () => ({
-  NavLink: jest.fn(({ children, to, className, onClick, ...rest }) => {
-    const resolvedClassName = typeof className === 'function' ? className({ isActive: to === '/' }) : className
-    mockNavLinkProps.push({ to, className: resolvedClassName, onClick, ...rest })
-    return (
-      <a href={to} className={resolvedClassName} onClick={onClick} data-end={rest.end?.toString()}>
-        {children}
-      </a>
-    )
-  }),
+  Link: jest.fn(({ children, to, className, onClick }) => (
+    <a href={to} className={className} onClick={onClick}>
+      {children}
+    </a>
+  )),
+  useLocation: () => ({ pathname: mockPathname }),
+  matchPath: (pattern, pathname) => {
+    const regex = new RegExp('^' + pattern.replace(/:[\w]+/g, '[^/]+') + '$')
+    return regex.test(pathname) ? {} : null
+  },
 }))
 
 jest.mock('react-i18next', () => ({
@@ -64,7 +65,7 @@ jest.mock('@/shadcn/ui/sidebar', () => ({
 import AppShell from './app-shell'
 
 beforeEach(() => {
-  mockNavLinkProps = []
+  mockPathname = '/'
   mockSetOpenMobile.mockClear()
 })
 
@@ -110,10 +111,11 @@ describe('AppShell', () => {
     expect(links[1]).toHaveAttribute('href', '/documents/new')
   })
 
-  it('sets end prop on the root NavLink for exact matching', () => {
+  it('marks Documents nav as active on document detail pages', () => {
+    mockPathname = '/documents/abc123'
     render(<AppShell><div>content</div></AppShell>)
-    const links = screen.getAllByRole('link')
-    expect(links[0]).toHaveAttribute('data-end', 'true')
+    const documentsLink = screen.getByText('Documents').closest('a')
+    expect(documentsLink.className).toContain('bg-sidebar-accent')
   })
 
   it('applies active class to the active nav item', () => {

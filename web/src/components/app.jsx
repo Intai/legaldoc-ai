@@ -1,14 +1,14 @@
 import React, { lazy, Suspense } from 'react'
+import { pdfjs } from 'react-pdf'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import '../i18n'
 import AppShell from './app-shell'
 import { GlobalDialog } from './global-dialog'
 
-const DocumentsPage = lazy(() => import('../documents/components/documents-page'))
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
-function DocumentDetail() {
-  return <div>Document Detail</div>
-}
+const DocumentsPage = lazy(() => import('../documents/components/documents-page'))
+const DocumentDetail = lazy(() => import('../documents/components/document-detail'))
 
 function App() {
   return (
@@ -23,7 +23,14 @@ function App() {
               </Suspense>
             }
           />
-          <Route path="/documents/:id" element={<DocumentDetail />} />
+          <Route
+            path="/documents/:id"
+            element={
+              <Suspense fallback={null}>
+                <DocumentDetail />
+              </Suspense>
+            }
+          />
         </Routes>
       </AppShell>
       <GlobalDialog />

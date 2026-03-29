@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from api.db.seed import SAMPLE_DOCUMENTS, seed
+from api.db.seed import LEGAL_CONTENT, SAMPLE_DOCUMENTS, generate_pdf, seed
 from api.models.document import DocumentStatus, DocumentType
 
 
@@ -26,6 +26,38 @@ class TestSampleDocuments:
         statuses_in_samples = {doc["status"] for doc in SAMPLE_DOCUMENTS}
         for status in DocumentStatus:
             assert status in statuses_in_samples, f"Missing status: {status}"
+
+    def test_every_document_has_pdf_content(self):
+        """Every sample document should have generated PDF bytes."""
+        for doc in SAMPLE_DOCUMENTS:
+            assert doc.get("pdf_content") is not None, (
+                f"Missing pdf_content for: {doc['title']}"
+            )
+            assert isinstance(doc["pdf_content"], bytes)
+            assert doc["pdf_content"][:5] == b"%PDF-"
+
+    def test_legal_content_exists_for_all_titles(self):
+        """Every sample document title should have a matching legal content entry."""
+        for doc in SAMPLE_DOCUMENTS:
+            assert doc["title"] in LEGAL_CONTENT, (
+                f"Missing legal content for: {doc['title']}"
+            )
+
+
+class TestGeneratePdf:
+    """Validate the PDF generation helper."""
+
+    def test_generates_valid_pdf_bytes(self):
+        """generate_pdf should return bytes starting with the PDF header."""
+        result = generate_pdf("Test Title", ["HEADING", "Body paragraph."])
+        assert isinstance(result, bytes)
+        assert result[:5] == b"%PDF-"
+
+    def test_empty_paragraphs_produces_valid_pdf(self):
+        """generate_pdf with empty paragraphs should still produce a valid PDF."""
+        result = generate_pdf("Empty", [])
+        assert isinstance(result, bytes)
+        assert result[:5] == b"%PDF-"
 
 
 class TestSeedFunction:

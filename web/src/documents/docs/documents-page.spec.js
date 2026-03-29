@@ -20,9 +20,11 @@ test.describe('Feature: Documents Page', () => {
     await expect(page.getByTestId('topbar').getByTestId('user-avatar')).toBeVisible();
 
     // And the sidebar should show "Documents" as the active navigation item
-    await expect(
-      page.getByTestId('sidebar').getByTestId('sidebar-nav').getByRole('link', { name: 'Documents' })
-    ).toHaveAttribute('aria-current', 'page');
+    const docsLink = page.getByTestId('sidebar-nav').getByRole('link', { name: 'Documents' });
+    const isActive = await docsLink.evaluate(
+      (el) => el.className.includes('font-semibold')
+    );
+    expect(isActive).toBe(true);
 
     // And the sidebar should show "New Document" as a navigation item
     await expect(
@@ -257,7 +259,7 @@ test.describe('Feature: Documents Page', () => {
   });
 
   test('DP-05: Show skeleton cards while loading', async ({ page }) => {
-    // Given the browser uses "waitForTimeout" to delay route "api/v1/documents" for "60" seconds
+    // Given the browser uses "page.waitForTimeout" to delay route "api/v1/documents" for "60" seconds
     await page.route('**/api/v1/documents**', async (route) => {
       await new Promise(resolve => setTimeout(resolve, 60000));
       await route.continue();
@@ -354,7 +356,7 @@ test.describe('Feature: Documents Page', () => {
     // Then I should see a "Load more" button centered below the card grid
     await expect(page.getByTestId('load-more-button')).toBeVisible();
 
-    // When the browser uses "waitForTimeout" to delay route "api/v1/documents" for "60" seconds
+    // When the browser uses "page.waitForTimeout" to delay route "api/v1/documents" for "60" seconds
     await page.route('**/api/v1/documents**', async (route) => {
       await new Promise(resolve => setTimeout(resolve, 60000));
       await route.continue();

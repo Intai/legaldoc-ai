@@ -7,6 +7,12 @@ globalThis.TextDecoder = TextDecoder
 
 import '@testing-library/jest-dom'
 
+globalThis.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 const originalInfo = console.info
 console.info = jest.fn((...args) => {
   const message = typeof args[0] === 'string' ? args[0] : String(args[0] || '')
