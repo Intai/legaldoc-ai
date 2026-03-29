@@ -115,13 +115,22 @@ describe('AppShell', () => {
     mockPathname = '/documents/abc123'
     render(<AppShell><div>content</div></AppShell>)
     const documentsLink = screen.getByText('Documents').closest('a')
-    expect(documentsLink.className).toContain('bg-sidebar-accent')
+    expect(documentsLink.className).toContain('bg-primary-100')
+  })
+
+  it('does not mark Documents nav as active on new document page', () => {
+    mockPathname = '/documents/new'
+    render(<AppShell><div>content</div></AppShell>)
+    const documentsLink = screen.getByText('Documents').closest('a')
+    expect(documentsLink.className).not.toContain('font-semibold')
+    const newDocLink = screen.getByText('New Document').closest('a')
+    expect(newDocLink.className).toContain('font-semibold')
   })
 
   it('applies active class to the active nav item', () => {
     render(<AppShell><div>content</div></AppShell>)
     const documentsLink = screen.getByText('Documents').closest('a')
-    expect(documentsLink.className).toContain('bg-sidebar-accent')
+    expect(documentsLink.className).toContain('bg-primary-100')
     expect(documentsLink.className).toContain('text-sidebar-accent-foreground')
   })
 

@@ -18,6 +18,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 from api.core.config import get_settings
 from api.models.document import DocumentModel, DocumentStatus, DocumentType
+from api.models.reference import ReferenceModel
 
 # ---------------------------------------------------------------------------
 # Legal content templates keyed by document title
@@ -465,6 +466,54 @@ SAMPLE_DOCUMENTS = [
 ]
 
 # Attach generated PDF content to each sample document.
+SAMPLE_REFERENCES = [
+    {
+        "title": "NDA Template",
+        "type": DocumentType.CONTRACT,
+        "description": (
+            "A standard non-disclosure agreement template for protecting "
+            "confidential information exchanged between two parties."
+        ),
+        "created_at": datetime(2026, 1, 2, 9, 0, tzinfo=timezone.utc),
+    },
+    {
+        "title": "Service Agreement",
+        "type": DocumentType.CONTRACT,
+        "description": (
+            "General service agreement outlining terms, deliverables, payment "
+            "schedules, and liability provisions for professional services."
+        ),
+        "created_at": datetime(2026, 1, 5, 10, 30, tzinfo=timezone.utc),
+    },
+    {
+        "title": "Privacy Policy Template",
+        "type": DocumentType.POLICY,
+        "description": (
+            "Comprehensive privacy policy template covering data collection, "
+            "usage, retention, and user rights under GDPR and CCPA."
+        ),
+        "created_at": datetime(2026, 1, 10, 14, 0, tzinfo=timezone.utc),
+    },
+    {
+        "title": "Employment Handbook",
+        "type": DocumentType.EMPLOYMENT,
+        "description": (
+            "Reference handbook template addressing workplace conduct, benefits, "
+            "leave policies, and employee rights and responsibilities."
+        ),
+        "created_at": datetime(2026, 1, 15, 8, 45, tzinfo=timezone.utc),
+    },
+    {
+        "title": "Vendor Agreement",
+        "type": DocumentType.CONTRACT,
+        "description": (
+            "Template agreement for vendor relationships covering supply terms, "
+            "quality standards, pricing, and dispute resolution."
+        ),
+        "created_at": datetime(2026, 1, 20, 11, 15, tzinfo=timezone.utc),
+    },
+]
+
 for _doc in SAMPLE_DOCUMENTS:
     _content = LEGAL_CONTENT.get(_doc["title"])
     if _content:
@@ -472,24 +521,29 @@ for _doc in SAMPLE_DOCUMENTS:
 
 
 async def seed():
-    """Drop existing documents and insert sample records.
+    """Drop existing documents and references, then insert sample records.
 
     Connects to MongoDB, initialises Beanie, then replaces
-    the ``documents`` collection contents with ``SAMPLE_DOCUMENTS``.
+    the ``documents`` and ``references`` collection contents with
+    ``SAMPLE_DOCUMENTS`` and ``SAMPLE_REFERENCES``.
     """
     settings = get_settings()
     client = AsyncIOMotorClient(settings.mongodb_uri)
     await init_beanie(
         database=client[settings.mongodb_db_name],
-        document_models=[DocumentModel],
+        document_models=[DocumentModel, ReferenceModel],
     )
 
     await DocumentModel.find_all().delete()
+    await ReferenceModel.find_all().delete()
 
     documents = [DocumentModel(**data) for data in SAMPLE_DOCUMENTS]
     await DocumentModel.insert_many(documents)
 
-    print(f"Seeded {len(documents)} documents.")
+    references = [ReferenceModel(**data) for data in SAMPLE_REFERENCES]
+    await ReferenceModel.insert_many(references)
+
+    print(f"Seeded {len(documents)} documents and {len(references)} references.")
 
 
 if __name__ == "__main__":  # pragma: no cover

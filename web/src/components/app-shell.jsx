@@ -20,16 +20,17 @@ import {
 } from '@/shadcn/ui/sidebar'
 
 const NAV_ITEMS = [
-  { to: '/', icon: FileText, labelKey: 'nav.documents', matchPaths: ['/', '/documents/:id'] },
+  { to: '/', icon: FileText, labelKey: 'nav.documents', matchPaths: ['/', '/documents/:id'], excludePaths: ['/documents/new'] },
   { to: '/documents/new', icon: Plus, labelKey: 'nav.newDocument' },
 ]
 
-function SidebarNavLink({ to, matchPaths, children }) {
+function SidebarNavLink({ to, matchPaths, excludePaths, children }) {
   const { setOpenMobile } = useSidebar()
   const { pathname } = useLocation()
-  const isActive = matchPaths
+  const isExcluded = excludePaths?.some(pattern => matchPath(pattern, pathname))
+  const isActive = !isExcluded && (matchPaths
     ? matchPaths.some(pattern => matchPath(pattern, pathname))
-    : matchPath(to, pathname)
+    : matchPath(to, pathname))
 
   return (
     <Link
@@ -37,8 +38,8 @@ function SidebarNavLink({ to, matchPaths, children }) {
       className={[
         'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors',
         isActive
-          ? 'bg-sidebar-accent font-semibold text-sidebar-accent-foreground'
-          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
+          ? 'bg-primary-100 font-semibold text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground hover:bg-primary-100/50 hover:text-sidebar-accent-foreground',
       ].join(' ')}
       onClick={() => setOpenMobile(false)}
     >
@@ -62,10 +63,10 @@ function AppShell({ children }) {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu data-testid="sidebar-nav">
-                {NAV_ITEMS.map(({ to, icon: Icon, labelKey, matchPaths }) => (
+                {NAV_ITEMS.map(({ to, icon: Icon, labelKey, matchPaths, excludePaths }) => (
                   <SidebarMenuItem key={to}>
                     <SidebarMenuButton asChild>
-                      <SidebarNavLink to={to} matchPaths={matchPaths}>
+                      <SidebarNavLink to={to} matchPaths={matchPaths} excludePaths={excludePaths}>
                         <Icon className="size-[18px] shrink-0" />
                         {t(labelKey)}
                       </SidebarNavLink>

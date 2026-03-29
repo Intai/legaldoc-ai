@@ -4,7 +4,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from api.db.seed import LEGAL_CONTENT, SAMPLE_DOCUMENTS, generate_pdf, seed
+from api.db.seed import (
+    LEGAL_CONTENT,
+    SAMPLE_DOCUMENTS,
+    SAMPLE_REFERENCES,
+    generate_pdf,
+    seed,
+)
 from api.models.document import DocumentStatus, DocumentType
 
 
@@ -44,6 +50,62 @@ class TestSampleDocuments:
             )
 
 
+class TestSampleReferences:
+    """Validate the reference seed data list."""
+
+    def test_has_five_reference_documents(self):
+        """Sample references should contain exactly 5 items."""
+        assert len(SAMPLE_REFERENCES) == 5
+
+    def test_includes_nda_template(self):
+        """References should include the NDA Template document."""
+        titles = {ref["title"] for ref in SAMPLE_REFERENCES}
+        assert "NDA Template" in titles
+
+    def test_includes_service_agreement(self):
+        """References should include the Service Agreement document."""
+        titles = {ref["title"] for ref in SAMPLE_REFERENCES}
+        assert "Service Agreement" in titles
+
+    def test_includes_privacy_policy_template(self):
+        """References should include the Privacy Policy Template document."""
+        titles = {ref["title"] for ref in SAMPLE_REFERENCES}
+        assert "Privacy Policy Template" in titles
+
+    def test_includes_employment_handbook(self):
+        """References should include the Employment Handbook document."""
+        titles = {ref["title"] for ref in SAMPLE_REFERENCES}
+        assert "Employment Handbook" in titles
+
+    def test_includes_vendor_agreement(self):
+        """References should include the Vendor Agreement document."""
+        titles = {ref["title"] for ref in SAMPLE_REFERENCES}
+        assert "Vendor Agreement" in titles
+
+    def test_reference_types_match_expected(self):
+        """Each reference should have the correct DocumentType."""
+        type_by_title = {ref["title"]: ref["type"] for ref in SAMPLE_REFERENCES}
+        assert type_by_title["NDA Template"] == DocumentType.CONTRACT
+        assert type_by_title["Service Agreement"] == DocumentType.CONTRACT
+        assert type_by_title["Privacy Policy Template"] == DocumentType.POLICY
+        assert type_by_title["Employment Handbook"] == DocumentType.EMPLOYMENT
+        assert type_by_title["Vendor Agreement"] == DocumentType.CONTRACT
+
+    def test_every_reference_has_description(self):
+        """Every reference should have a non-empty description."""
+        for ref in SAMPLE_REFERENCES:
+            assert ref.get("description"), (
+                f"Missing description for: {ref['title']}"
+            )
+
+    def test_every_reference_has_created_at(self):
+        """Every reference should have a created_at timestamp."""
+        for ref in SAMPLE_REFERENCES:
+            assert ref.get("created_at") is not None, (
+                f"Missing created_at for: {ref['title']}"
+            )
+
+
 class TestGeneratePdf:
     """Validate the PDF generation helper."""
 
@@ -64,40 +126,83 @@ class TestSeedFunction:
     """Validate the seed function orchestration."""
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
     @patch("api.db.seed.init_beanie", new_callable=AsyncMock)
     @patch("api.db.seed.AsyncIOMotorClient")
-    async def test_seed_deletes_then_inserts(
-        self, mock_client, mock_init_beanie, mock_model
+    async def test_seed_deletes_then_inserts_documents(
+        self, mock_client, mock_init_beanie, mock_doc_model, mock_ref_model
     ):
         """Seed should delete existing documents and insert sample ones."""
-        mock_delete = AsyncMock()
-        mock_find_all = AsyncMock()
-        mock_find_all.delete = mock_delete
-        mock_model.find_all.return_value = mock_find_all
-        mock_model.insert_many = AsyncMock()
+        mock_doc_delete = AsyncMock()
+        mock_doc_find_all = AsyncMock()
+        mock_doc_find_all.delete = mock_doc_delete
+        mock_doc_model.find_all.return_value = mock_doc_find_all
+        mock_doc_model.insert_many = AsyncMock()
+
+        mock_ref_delete = AsyncMock()
+        mock_ref_find_all = AsyncMock()
+        mock_ref_find_all.delete = mock_ref_delete
+        mock_ref_model.find_all.return_value = mock_ref_find_all
+        mock_ref_model.insert_many = AsyncMock()
 
         await seed()
 
-        mock_model.find_all.assert_called_once()
-        mock_delete.assert_awaited_once()
-        mock_model.insert_many.assert_awaited_once()
-        inserted = mock_model.insert_many.call_args[0][0]
-        assert len(inserted) == len(SAMPLE_DOCUMENTS)
+        mock_doc_model.find_all.assert_called_once()
+        mock_doc_delete.assert_awaited_once()
+        mock_doc_model.insert_many.assert_awaited_once()
+        inserted_docs = mock_doc_model.insert_many.call_args[0][0]
+        assert len(inserted_docs) == len(SAMPLE_DOCUMENTS)
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
     @patch("api.db.seed.init_beanie", new_callable=AsyncMock)
     @patch("api.db.seed.AsyncIOMotorClient")
-    async def test_seed_initialises_beanie(
-        self, mock_client, mock_init_beanie, mock_model
+    async def test_seed_deletes_then_inserts_references(
+        self, mock_client, mock_init_beanie, mock_doc_model, mock_ref_model
     ):
-        """Seed should initialise Beanie with the DocumentModel."""
-        mock_delete = AsyncMock()
-        mock_find_all = AsyncMock()
-        mock_find_all.delete = mock_delete
-        mock_model.find_all.return_value = mock_find_all
-        mock_model.insert_many = AsyncMock()
+        """Seed should delete existing references and insert sample ones."""
+        mock_doc_delete = AsyncMock()
+        mock_doc_find_all = AsyncMock()
+        mock_doc_find_all.delete = mock_doc_delete
+        mock_doc_model.find_all.return_value = mock_doc_find_all
+        mock_doc_model.insert_many = AsyncMock()
+
+        mock_ref_delete = AsyncMock()
+        mock_ref_find_all = AsyncMock()
+        mock_ref_find_all.delete = mock_ref_delete
+        mock_ref_model.find_all.return_value = mock_ref_find_all
+        mock_ref_model.insert_many = AsyncMock()
+
+        await seed()
+
+        mock_ref_model.find_all.assert_called_once()
+        mock_ref_delete.assert_awaited_once()
+        mock_ref_model.insert_many.assert_awaited_once()
+        inserted_refs = mock_ref_model.insert_many.call_args[0][0]
+        assert len(inserted_refs) == len(SAMPLE_REFERENCES)
+
+    @pytest.mark.asyncio
+    @patch("api.db.seed.ReferenceModel")
+    @patch("api.db.seed.DocumentModel")
+    @patch("api.db.seed.init_beanie", new_callable=AsyncMock)
+    @patch("api.db.seed.AsyncIOMotorClient")
+    async def test_seed_initialises_beanie_with_both_models(
+        self, mock_client, mock_init_beanie, mock_doc_model, mock_ref_model
+    ):
+        """Seed should initialise Beanie with DocumentModel and ReferenceModel."""
+        mock_doc_delete = AsyncMock()
+        mock_doc_find_all = AsyncMock()
+        mock_doc_find_all.delete = mock_doc_delete
+        mock_doc_model.find_all.return_value = mock_doc_find_all
+        mock_doc_model.insert_many = AsyncMock()
+
+        mock_ref_delete = AsyncMock()
+        mock_ref_find_all = AsyncMock()
+        mock_ref_find_all.delete = mock_ref_delete
+        mock_ref_model.find_all.return_value = mock_ref_find_all
+        mock_ref_model.insert_many = AsyncMock()
 
         await seed()
 

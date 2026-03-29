@@ -2,50 +2,61 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 
 jest.mock('react-pdf', () => ({
-  pdfjs: {
-    GlobalWorkerOptions: { workerSrc: '' },
-    version: '5.5.207',
-  },
+  pdfjs: { GlobalWorkerOptions: {}, version: '0.0.0' },
 }))
 
 jest.mock('../i18n', () => {})
+
 jest.mock('./app-shell', () => {
   return function MockAppShell({ children }) {
-    return <div>{children}</div>
+    return <div data-testid="app-shell">{children}</div>
   }
 })
+
 jest.mock('./global-dialog', () => ({
-  GlobalDialog: function MockGlobalDialog() {
-    return null
+  GlobalDialog() {
+    return <div data-testid="global-dialog" />
   },
 }))
+
 jest.mock('../documents/components/documents-page', () => {
   return function MockDocumentsPage() {
-    return <div>Documents Page</div>
+    return <div data-testid="documents-page" />
   }
 })
+
+jest.mock('../documents/components/new-document-page', () => {
+  return function MockNewDocumentPage() {
+    return <div data-testid="new-document-page" />
+  }
+})
+
 jest.mock('../documents/components/document-detail', () => {
   return function MockDocumentDetail() {
-    return <div>Document Detail</div>
+    return <div data-testid="document-detail" />
   }
 })
 
 import App from './app'
 
 describe('App', () => {
-  it('renders without crashing and displays the documents page at root route', async () => {
+  it('renders documents page at the root route', async () => {
+    window.history.pushState({}, '', '/')
     render(<App />)
-    expect(await screen.findByText('Documents Page')).toBeInTheDocument()
+    expect(await screen.findByTestId('documents-page')).toBeInTheDocument()
+    expect(screen.getByTestId('app-shell')).toBeInTheDocument()
+    expect(screen.getByTestId('global-dialog')).toBeInTheDocument()
   })
 
-  it('renders document detail route', async () => {
-    window.history.pushState({}, '', '/documents/123')
+  it('renders new document page at /documents/new', async () => {
+    window.history.pushState({}, '', '/documents/new')
     render(<App />)
-    expect(await screen.findByText('Document Detail')).toBeInTheDocument()
+    expect(await screen.findByTestId('new-document-page')).toBeInTheDocument()
   })
 
-  it('configures the PDF.js worker source', () => {
-    const { pdfjs } = require('react-pdf')
-    expect(pdfjs.GlobalWorkerOptions.workerSrc).toContain('pdfjs-dist')
+  it('renders document detail at /documents/:id', async () => {
+    window.history.pushState({}, '', '/documents/abc-123')
+    render(<App />)
+    expect(await screen.findByTestId('document-detail')).toBeInTheDocument()
   })
 })

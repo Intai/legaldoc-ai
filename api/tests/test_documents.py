@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from api.main import create_app
 from api.models.document import DocumentModel, DocumentStatus, DocumentType
+from api.models.reference import ReferenceModel
 
 
 def _make_cursor(payload: dict) -> str:
@@ -66,6 +67,20 @@ def client(app):
     """Create an httpx AsyncClient for the test app."""
     transport = ASGITransport(app=app)
     return AsyncClient(transport=transport, base_url="http://test")
+
+
+class TestBuildNdaPdf:
+    """Tests for the _build_nda_pdf helper function."""
+
+    def test_returns_valid_pdf_bytes_and_page_count(self):
+        """Test that _build_nda_pdf returns PDF bytes starting with %PDF."""
+        from api.routes.v1.endpoints.documents import _build_nda_pdf
+
+        pdf_bytes, page_count = _build_nda_pdf("Test NDA")
+
+        assert isinstance(pdf_bytes, bytes)
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
 
 
 class TestListDocuments:
@@ -155,6 +170,31 @@ class TestListDocuments:
         )
         assert cursor_data["_id"] == "507f1f77bcf86cd799439012"
         assert "created_at" in cursor_data
+
+    @pytest.mark.asyncio
+    async def test_cursor_pagination_alpha(self, client):
+        """Test that sort=alpha cursor encodes title instead of created_at."""
+        id1 = "507f1f77bcf86cd799439011"
+        id2 = "507f1f77bcf86cd799439012"
+        id3 = "507f1f77bcf86cd799439013"
+        doc1 = _make_doc(title="Alpha", doc_id=id1)
+        doc2 = _make_doc(title="Beta", doc_id=id2)
+        extra = _make_doc(title="Gamma", doc_id=id3)
+
+        mock_find, _, _ = _mock_find([doc1, doc2, extra])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find):
+            resp = await client.get("/api/v1/documents?sort=alpha&limit=2")
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["data"]["documents"]) == 2
+        cursor_data = json.loads(
+            base64.urlsafe_b64decode(body["data"]["nextCursor"]).decode()
+        )
+        assert cursor_data["_id"] == id2
+        assert cursor_data["title"] == "Beta"
+        assert "created_at" not in cursor_data
 
     @pytest.mark.asyncio
     async def test_cursor_pagination_last_page(self, client):
@@ -330,6 +370,119 @@ class TestGetDocument:
         assert body["error"]["code"] == "INTERNAL_ERROR"
 
 
+def _make_raw_doc(
+    *,
+    doc_id="507f1f77bcf86cd799439011",
+    title="Test Doc",
+    doc_type=DocumentType.CONTRACT,
+    status=DocumentStatus.DONE,
+    description="A test document.",
+    page_count=3,
+    created_at=None,
+):
+    """Create a raw MongoDB dict matching DocumentModel shape."""
+    return {
+        "_id": PydanticObjectId(doc_id),
+        "title": title,
+        "type": doc_type,
+        "status": status,
+        "description": description,
+        "created_at": created_at
+        or datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc),
+        "page_count": page_count,
+        "pdf_content": None,
+    }
+
+
+class TestUpdateDocumentStatus:
+    """Tests for PUT /api/v1/documents/{id}/status."""
+
+    @pytest.mark.asyncio
+    async def test_updates_document_status(self, client):
+        """Test that a valid request updates the status and returns the document."""
+        raw = _make_raw_doc(status=DocumentStatus.DONE)
+        mock_collection = MagicMock()
+        mock_collection.find_one_and_update = AsyncMock(return_value=raw)
+
+        with patch.object(
+            DocumentModel, "get_motor_collection", return_value=mock_collection
+        ):
+            resp = await client.put(
+                "/api/v1/documents/507f1f77bcf86cd799439011/status",
+                json={"status": "Done"},
+            )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["error"] is None
+        assert body["data"]["status"] == "Done"
+        mock_collection.find_one_and_update.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_returns_404_when_not_found(self, client):
+        """Test that updating a missing document returns a NOT_FOUND error."""
+        mock_collection = MagicMock()
+        mock_collection.find_one_and_update = AsyncMock(return_value=None)
+
+        with patch.object(
+            DocumentModel, "get_motor_collection", return_value=mock_collection
+        ):
+            resp = await client.put(
+                "/api/v1/documents/507f1f77bcf86cd799439011/status",
+                json={"status": "Done"},
+            )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["data"] is None
+        assert body["error"]["code"] == "NOT_FOUND"
+        assert body["error"]["message"] == "Document not found."
+
+    @pytest.mark.asyncio
+    async def test_returns_error_for_invalid_id(self, client):
+        """Test that an invalid ObjectId returns an INVALID_ID error."""
+        resp = await client.put(
+            "/api/v1/documents/not-valid-id/status",
+            json={"status": "Done"},
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["data"] is None
+        assert body["error"]["code"] == "INVALID_ID"
+
+    @pytest.mark.asyncio
+    async def test_returns_422_for_invalid_status(self, client):
+        """Test that an invalid status value returns a 422 validation error."""
+        resp = await client.put(
+            "/api/v1/documents/507f1f77bcf86cd799439011/status",
+            json={"status": "InvalidStatus"},
+        )
+
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_returns_error_on_db_failure(self, client):
+        """Test that a database error returns an INTERNAL_ERROR."""
+        mock_collection = MagicMock()
+        mock_collection.find_one_and_update = AsyncMock(
+            side_effect=RuntimeError("db failure")
+        )
+
+        with patch.object(
+            DocumentModel, "get_motor_collection", return_value=mock_collection
+        ):
+            resp = await client.put(
+                "/api/v1/documents/507f1f77bcf86cd799439011/status",
+                json={"status": "Done"},
+            )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["data"] is None
+        assert body["error"]["code"] == "INTERNAL_ERROR"
+
+
 class TestGetDocumentPdf:
     """Tests for GET /api/v1/documents/{id}/pdf."""
 
@@ -396,3 +549,310 @@ class TestGetDocumentPdf:
         body = resp.json()
         assert body["data"] is None
         assert body["error"]["code"] == "INVALID_ID"
+
+
+def _make_ref(
+    *,
+    title="NDA Template",
+    ref_type=DocumentType.NDA,
+    description="A reference.",
+    ref_id="607f1f77bcf86cd799439011",
+):
+    """Create a mock ReferenceModel instance."""
+    ref = MagicMock(spec=ReferenceModel)
+    ref.id = ref_id
+    ref.title = title
+    ref.type = ref_type
+    ref.description = description
+    ref.created_at = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+    return ref
+
+
+def _parse_sse_events(text: str) -> list[dict]:
+    """Parse SSE text into a list of event dicts with 'event' and 'data' keys."""
+    events = []
+    current: dict = {}
+    for line in text.split("\n"):
+        if line.startswith("event:"):
+            current["event"] = line.split(":", 1)[1].strip()
+        elif line.startswith("data:"):
+            current["data"] = line.split(":", 1)[1].strip()
+        elif line.strip() == "" and current:
+            events.append(current)
+            current = {}
+    if current:
+        events.append(current)
+    return events
+
+
+class TestParseSseEvents:
+    """Tests for _parse_sse_events helper."""
+
+    def test_parses_event_without_trailing_blank_line(self):
+        text = "event: phase\ndata: test"
+        events = _parse_sse_events(text)
+        assert events == [{"event": "phase", "data": "test"}]
+
+
+class TestGenerateDocument:
+    """Tests for POST /api/v1/documents/generate."""
+
+    @pytest.mark.asyncio
+    async def test_streams_phase_events_and_complete(self, client):
+        """Test that generation streams phase events followed by a complete event."""
+        ref = _make_ref()
+        mock_doc = MagicMock(spec=DocumentModel)
+        mock_doc.id = "507f1f77bcf86cd799439011"
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch.object(
+                DocumentModel,
+                "insert",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "api.routes.v1.endpoints.documents.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            MockDocCls.return_value = mock_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Generate an NDA for two parties.",
+                },
+            )
+
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp.headers["content-type"]
+
+        events = _parse_sse_events(resp.text)
+        phase_events = [e for e in events if e.get("event") == "phase"]
+        complete_events = [e for e in events if e.get("event") == "complete"]
+
+        assert len(phase_events) == 4
+        phases = [json.loads(e["data"])["phase"] for e in phase_events]
+        assert phases == ["analyzing", "structuring", "drafting", "finalizing"]
+
+        assert len(complete_events) == 1
+        complete_data = json.loads(complete_events[0]["data"])
+        assert "documentId" in complete_data
+
+    @pytest.mark.asyncio
+    async def test_joins_reference_titles(self, client):
+        """Test that document title is formed by joining reference titles."""
+        ref1 = _make_ref(title="NDA Template", ref_id="607f1f77bcf86cd799439011")
+        ref2 = _make_ref(
+            title="Privacy Policy",
+            ref_type=DocumentType.POLICY,
+            ref_id="607f1f77bcf86cd799439012",
+        )
+
+        created_doc = MagicMock(spec=DocumentModel)
+        created_doc.id = "507f1f77bcf86cd799439011"
+
+        async def mock_get(rid):
+            mapping = {
+                PydanticObjectId("607f1f77bcf86cd799439011"): ref1,
+                PydanticObjectId("607f1f77bcf86cd799439012"): ref2,
+            }
+            return mapping.get(rid)
+
+        with (
+            patch.object(ReferenceModel, "get", side_effect=mock_get),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "api.routes.v1.endpoints.documents.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            created_doc.insert = AsyncMock(return_value=None)
+            MockDocCls.return_value = created_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
+
+            # Capture constructor args
+            call_args = {}
+
+            def capture_init(**kwargs):
+                call_args.update(kwargs)
+                return created_doc
+
+            MockDocCls.side_effect = capture_init
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": [
+                        "607f1f77bcf86cd799439011",
+                        "607f1f77bcf86cd799439012",
+                    ],
+                    "context": "Multi-reference context.",
+                },
+            )
+
+        assert resp.status_code == 200
+        assert call_args["title"] == "NDA Template, Privacy Policy"
+        assert call_args["type"] == DocumentType.NDA
+        assert call_args["status"] == DocumentStatus.DRAFT
+
+    @pytest.mark.asyncio
+    async def test_truncates_context_to_200_chars(self, client):
+        """Test that the description is truncated to 200 characters."""
+        ref = _make_ref()
+        created_doc = MagicMock(spec=DocumentModel)
+        created_doc.id = "507f1f77bcf86cd799439011"
+
+        long_context = "A" * 300
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "api.routes.v1.endpoints.documents.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            call_args = {}
+
+            def capture_init(**kwargs):
+                call_args.update(kwargs)
+                return created_doc
+
+            MockDocCls.side_effect = capture_init
+            created_doc.insert = AsyncMock(return_value=None)
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": long_context,
+                },
+            )
+
+        assert resp.status_code == 200
+        assert len(call_args["description"]) == 200
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_no_valid_references(self, client):
+        """Test that an error event is emitted when no references are found."""
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Some context",
+                },
+            )
+
+        assert resp.status_code == 200
+        events = _parse_sse_events(resp.text)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) == 1
+        error_data = json.loads(error_events[0]["data"])
+        assert error_data["code"] == "NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_returns_error_on_exception(self, client):
+        """Test that an exception during generation emits an error event."""
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("db failure"),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Some context",
+                },
+            )
+
+        assert resp.status_code == 200
+        events = _parse_sse_events(resp.text)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) == 1
+        error_data = json.loads(error_events[0]["data"])
+        assert error_data["code"] == "INTERNAL_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_generates_valid_pdf(self, client):
+        """Test that the generated PDF content is valid."""
+        ref = _make_ref()
+        created_doc = MagicMock(spec=DocumentModel)
+        created_doc.id = "507f1f77bcf86cd799439011"
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "api.routes.v1.endpoints.documents.asyncio.sleep",
+                new_callable=AsyncMock,
+            ),
+        ):
+            call_args = {}
+
+            def capture_init(**kwargs):
+                call_args.update(kwargs)
+                return created_doc
+
+            MockDocCls.side_effect = capture_init
+            created_doc.insert = AsyncMock(return_value=None)
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "NDA context",
+                },
+            )
+
+        assert resp.status_code == 200
+        assert call_args["pdf_content"].startswith(b"%PDF")
+        assert call_args["page_count"] >= 1

@@ -44,6 +44,7 @@ class TestDependencies:
         """init_db should create a motor client and initialise Beanie."""
         from api.core import dependencies
         from api.models.document import DocumentModel
+        from api.models.reference import ReferenceModel
 
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
@@ -54,7 +55,7 @@ class TestDependencies:
         mock_client_cls.assert_called_once_with(settings.mongodb_uri)
         mock_init_beanie.assert_awaited_once_with(
             database=mock_client[settings.mongodb_db_name],
-            document_models=[DocumentModel],
+            document_models=[DocumentModel, ReferenceModel],
         )
         dependencies._client = None
 

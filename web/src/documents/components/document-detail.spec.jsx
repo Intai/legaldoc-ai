@@ -69,6 +69,12 @@ jest.mock('../../config/index.js', () => ({
   default: { apiBaseUrl: 'http://localhost:8000/api' },
 }))
 
+const mockDownloadFile = jest.fn()
+
+jest.mock('../../utils/browser.js', () => ({
+  downloadFile: (...args) => mockDownloadFile(...args),
+}))
+
 import DocumentDetail from './document-detail'
 
 const mockDocument = {
@@ -138,22 +144,10 @@ describe('DocumentDetail', () => {
   })
 
   it('triggers a browser download when export PDF button is clicked', () => {
-    const mockClick = jest.fn()
-    const originalCreateElement = window.document.createElement.bind(window.document)
-    const mockCreateElement = jest.spyOn(window.document, 'createElement').mockImplementation(tag => {
-      const el = originalCreateElement(tag)
-      if (tag === 'a') {
-        el.click = mockClick
-      }
-      return el
-    })
-
     render(<DocumentDetail />)
     fireEvent.click(screen.getByTestId('export-pdf-button'))
 
-    expect(mockClick).toHaveBeenCalled()
-
-    mockCreateElement.mockRestore()
+    expect(mockDownloadFile).toHaveBeenCalledWith('http://localhost:8000/api/v1/documents/doc-123/pdf')
   })
 
   it('renders PDF pages with default width of 720', () => {

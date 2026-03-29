@@ -15,5 +15,5 @@ globs: web/**
 
 - Our own file names are in hyphenated lower case.
 - Implement in JavaScript instead of TypeScript.
-- Name test files with `*.spec.js*` next to the source code.
+- Name test files with `*.spec.js*` next to the source code. Do NOT use `*.test.js*`.
 - Write JSDoc for exported functions in utils, and store actions/selectors.

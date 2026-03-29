@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from api.core.config import get_settings
 from api.models.document import DocumentModel
+from api.models.reference import ReferenceModel
 
 _client: AsyncIOMotorClient | None = None
 
@@ -18,7 +19,7 @@ async def init_db():
     _client = AsyncIOMotorClient(settings.mongodb_uri)
     await init_beanie(
         database=_client[settings.mongodb_db_name],
-        document_models=[DocumentModel],
+        document_models=[DocumentModel, ReferenceModel],
     )
 
 

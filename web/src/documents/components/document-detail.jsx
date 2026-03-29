@@ -7,6 +7,7 @@ import { ArrowLeft, Download } from 'lucide-react'
 import { Button } from '@/shadcn/ui/button'
 import config from '../../config/index.js'
 import { useDocumentDetailStore } from '../../stores/document-detail-store.js'
+import { downloadFile } from '../../utils/browser.js'
 import DocumentDetailSkeleton from './document-detail-skeleton.jsx'
 
 function DocumentDetail() {
@@ -41,12 +42,7 @@ function DocumentDetail() {
   const pdfUrl = `${config.apiBaseUrl}/v1/documents/${id}/pdf`
 
   const handleExportPdf = useCallback(() => {
-    const link = window.document.createElement('a')
-    link.href = pdfUrl
-    link.download = ''
-    window.document.body.appendChild(link)
-    link.click()
-    window.document.body.removeChild(link)
+    downloadFile(pdfUrl)
   }, [pdfUrl])
 
   return (

@@ -1,9 +1,14 @@
 """Tests for document schema models."""
 
+import pytest
+
+from api.models.document import DocumentStatus
+from api.schemas.common import ErrorDetail
 from api.schemas.document import (
     DocumentDetailResponse,
     DocumentResponse,
-    ErrorDetail,
+    GenerateDocumentRequest,
+    UpdateDocumentStatusRequest,
 )
 
 
@@ -48,3 +53,54 @@ class TestDocumentDetailResponse:
 
         assert "createdAt" in output["data"]
         assert "pageCount" in output["data"]
+
+
+class TestGenerateDocumentRequest:
+    """Tests for GenerateDocumentRequest schema."""
+
+    def test_accepts_camel_case_alias(self):
+        """Test that referenceIds alias populates reference_ids field."""
+        req = GenerateDocumentRequest(
+            referenceIds=["id1", "id2"],
+            context="Some context",
+        )
+
+        assert req.reference_ids == ["id1", "id2"]
+        assert req.context == "Some context"
+
+    def test_accepts_snake_case_field_name(self):
+        """Test that reference_ids can be set via populate_by_name."""
+        req = GenerateDocumentRequest(
+            reference_ids=["id1"],
+            context="Context text",
+        )
+
+        assert req.reference_ids == ["id1"]
+
+    def test_serialization_uses_camel_case(self):
+        """Test that serialized output uses camelCase alias."""
+        req = GenerateDocumentRequest(
+            referenceIds=["id1"],
+            context="Some context",
+        )
+        output = req.model_dump(by_alias=True)
+
+        assert "referenceIds" in output
+        assert output["referenceIds"] == ["id1"]
+
+
+class TestUpdateDocumentStatusRequest:
+    """Tests for UpdateDocumentStatusRequest schema."""
+
+    def test_accepts_valid_status(self):
+        """Test that a valid DocumentStatus is accepted."""
+        req = UpdateDocumentStatusRequest(status=DocumentStatus.DONE)
+
+        assert req.status == DocumentStatus.DONE
+
+    def test_rejects_invalid_status(self):
+        """Test that an invalid status value raises a validation error."""
+        import pydantic
+
+        with pytest.raises(pydantic.ValidationError):
+            UpdateDocumentStatusRequest(status="InvalidStatus")

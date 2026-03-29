@@ -8,6 +8,7 @@ import { GlobalDialog } from './global-dialog'
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 const DocumentsPage = lazy(() => import('../documents/components/documents-page'))
+const NewDocumentPage = lazy(() => import('../documents/components/new-document-page'))
 const DocumentDetail = lazy(() => import('../documents/components/document-detail'))
 
 function App() {
@@ -20,6 +21,14 @@ function App() {
             element={
               <Suspense fallback={null}>
                 <DocumentsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/documents/new"
+            element={
+              <Suspense fallback={null}>
+                <NewDocumentPage />
               </Suspense>
             }
           />

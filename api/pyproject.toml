@@ -13,7 +13,10 @@ dependencies = [
     "beanie>=1.26,<2",
     "pydantic",
     "pydantic-settings",
+    "pypdf",
     "reportlab",
+    "sse-starlette",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
@@ -44,6 +47,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["api"]
+omit = ["api/tests/*"]
 
 [tool.coverage.report]
 show_missing = true

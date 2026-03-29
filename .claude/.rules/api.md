@@ -4,6 +4,7 @@ globs: api/**
 
 ## Testing
 
+- Run tests and linting directly (not via Docker). Tests use `mongomock-motor` for in-memory MongoDB mocking.
 - `ruff check api/` to lint all files.
   - `ruff check "path/to/file.py"` to lint a specific file.
 - `ruff format api/` to format all files.

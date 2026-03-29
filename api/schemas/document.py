@@ -1,6 +1,23 @@
-"""Pydantic response schemas for document endpoints."""
+"""Pydantic request and response schemas for document endpoints."""
 
 from pydantic import BaseModel, Field
+
+from api.models.document import DocumentStatus
+from api.schemas.common import ErrorDetail
+
+
+class GenerateDocumentRequest(BaseModel):
+    """Request body for the document generation endpoint.
+
+    Attributes:
+        reference_ids: List of reference document IDs to base generation on.
+        context: User-provided context or questions for generation.
+    """
+
+    reference_ids: list[str] = Field(alias="referenceIds")
+    context: str
+
+    model_config = {"populate_by_name": True}
 
 
 class DocumentResponse(BaseModel):
@@ -41,18 +58,6 @@ class DocumentListData(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class ErrorDetail(BaseModel):
-    """Error detail in API responses.
-
-    Attributes:
-        message: Human-readable error message.
-        code: Machine-readable error code.
-    """
-
-    message: str
-    code: str
-
-
 class DocumentListResponse(BaseModel):
     """Top-level response for the document list endpoint.
 
@@ -75,3 +80,13 @@ class DocumentDetailResponse(BaseModel):
 
     data: DocumentResponse | None = None
     error: ErrorDetail | None = None
+
+
+class UpdateDocumentStatusRequest(BaseModel):
+    """Request body for updating a document's status.
+
+    Attributes:
+        status: The new document status.
+    """
+
+    status: DocumentStatus
