@@ -47,7 +47,10 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["api"]
-omit = ["api/tests/*"]
+omit = [
+  "*/__init__.py",
+  "tests/*",
+]
 
 [tool.coverage.report]
 show_missing = true
