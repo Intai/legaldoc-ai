@@ -51,6 +51,18 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 - [Document page BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/document-detail.feature)
 - [Generate document BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/new-document.feature)
 - [LangGraph workflow BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/generate-document.feature)
+- [Tech stack](https://github.com/Intai/legaldoc-ai/blob/main/CLAUDE.md)
+
+### LangGraph Workflow
+
+The document generation pipeline processes user-provided reference PDFs and context through four sequential nodes:
+
+| Node | Purpose |
+|---|---|
+| **Analyze** | Extracts key parties, legal terms, clauses, obligations, and dates from reference documents. Classifies the document type (Contract, Policy, Employment, or NDA) and suggests a title. |
+| **Structure** | Creates a hierarchical outline covering preamble, recitals, definitions, substantive sections, standard legal provisions, and execution blocks. |
+| **Draft** | Writes professional legal prose for every section using proper conventions ("shall" for obligations, "may" for permissions, numbered subsections, and cross-references). |
+| **Finalize** | Reviews the draft for consistency (cross-references, defined terms, party names), then outputs structured JSON sections ready for rendering. |
 
 ```
 ┌──────────────────────────────────────────────────────────┐
