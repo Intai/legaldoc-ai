@@ -9,4 +9,4 @@ RUN pip install -e "./langraph" && pip install -e "./api[dev]"
 COPY --from=langraph . ./langraph
 COPY . ./api
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/srv/api"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/srv/api", "--reload-dir", "/srv/langraph"]
