@@ -1,6 +1,6 @@
+![Web Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Intai/a55e01d59a2568227c0e8e4c3ba243f9/raw/web-coverage.json)
 ![API Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Intai/a55e01d59a2568227c0e8e4c3ba243f9/raw/api-coverage.json)
 ![LangGraph Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Intai/a55e01d59a2568227c0e8e4c3ba243f9/raw/langraph-coverage.json)
-![Web Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Intai/a55e01d59a2568227c0e8e4c3ba243f9/raw/web-coverage.json)
 
 ## Introduction
 
