@@ -51,11 +51,11 @@ endif
 
 coverage: ## Run tests with coverage (svc=api|web, default: both)
 ifneq ($(filter api,$(_svc)),)
-	cd api && pytest --cov --cov-report=term-missing tests/
-	cd langraph && pytest --cov --cov-report=term-missing tests/
+	cd api && pytest --cov --cov-report=term-missing --cov-report=json tests/
+	cd langraph && pytest --cov --cov-report=term-missing --cov-report=json tests/
 endif
 ifneq ($(filter web,$(_svc)),)
-	cd web && npm run test:coverage
+	cd web && npm run test:coverage -- --coverageReporters=json-summary
 endif
 
 regression: ## Run e2e tests (include=all to include long scenarios)

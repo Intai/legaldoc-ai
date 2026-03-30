@@ -1,3 +1,7 @@
+![API Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Intai/a55e01d59a2568227c0e8e4c3ba243f9/raw/api-coverage.json)
+![LangGraph Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Intai/a55e01d59a2568227c0e8e4c3ba243f9/raw/langraph-coverage.json)
+![Web Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Intai/a55e01d59a2568227c0e8e4c3ba243f9/raw/web-coverage.json)
+
 ## Introduction
 
 LegalDoc AI streamlines legal document creation. Select one or more reference documents, provide your questions or specific context, and the system generates a tailored legal document — ready to review, and save.

@@ -1,0 +1,72 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Run coverage
+        run: make coverage
+
+      - name: Extract coverage percentages
+        run: |
+          echo "API_COV=$(python -c "import json; print(json.load(open('api/coverage.json'))['totals']['percent_covered_display'])")" >> "$GITHUB_ENV"
+          echo "LANGRAPH_COV=$(python -c "import json; print(json.load(open('langraph/coverage.json'))['totals']['percent_covered_display'])")" >> "$GITHUB_ENV"
+          echo "WEB_COV=$(node -e "const r=require('./web/coverage/coverage-summary.json'); console.log(Math.round(r.total.lines.pct))")" >> "$GITHUB_ENV"
+
+      - name: Update API badge
+        if: github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: a55e01d59a2568227c0e8e4c3ba243f9
+          filename: api-coverage.json
+          label: API
+          message: ${{ env.API_COV }}%
+          valColorRange: ${{ env.API_COV }}
+          minColorRange: 50
+          maxColorRange: 100
+
+      - name: Update LangGraph badge
+        if: github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: a55e01d59a2568227c0e8e4c3ba243f9
+          filename: langraph-coverage.json
+          label: LangGraph
+          message: ${{ env.LANGRAPH_COV }}%
+          valColorRange: ${{ env.LANGRAPH_COV }}
+          minColorRange: 50
+          maxColorRange: 100
+
+      - name: Update Web badge
+        if: github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: a55e01d59a2568227c0e8e4c3ba243f9
+          filename: web-coverage.json
+          label: Web
+          message: ${{ env.WEB_COV }}%
+          valColorRange: ${{ env.WEB_COV }}
+          minColorRange: 50
+          maxColorRange: 100
