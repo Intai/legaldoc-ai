@@ -37,7 +37,20 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
    - `make coverage` to calculate unit test coverage.
    - `make regression` to run BDD scenarios headlessly.
 
-## Technical Overview
+## Overview
+
+- [Product design](https://github.com/Intai/legaldoc-ai/blob/main/docs/product-design.md)
+- [Style guide](https://htmlpreview.github.io/?https://github.com/Intai/legaldoc-ai/blob/main/docs/style-guide.html)
+- [Home page layout design](https://github.com/Intai/legaldoc-ai/blob/main/docs/documents-layout.md)
+- [Document page layout design](https://github.com/Intai/legaldoc-ai/blob/main/docs/document-detail-layout.md)
+- [Generate document layout design](https://github.com/Intai/legaldoc-ai/blob/main/docs/new-document-layout.md)
+- [Home page story](https://github.com/Intai/legaldoc-ai/blob/main/docs/documents-story.md)
+- [Document page story](https://github.com/Intai/legaldoc-ai/blob/main/docs/document-detail-story.md)
+- [Generate document story](https://github.com/Intai/legaldoc-ai/blob/main/docs/new-document-story.md)
+- [Home page BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/documents-page.feature)
+- [Document page BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/document-detail.feature)
+- [Generate document BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/new-document.feature)
+- [LangGraph workflow BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/generate-document.feature)
 
 ```
 ┌──────────────────────────────────────────────────────────┐

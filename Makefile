@@ -58,5 +58,9 @@ ifneq ($(filter web,$(_svc)),)
 	cd web && npm run test:coverage
 endif
 
-regression: ## Run e2e tests
+regression: ## Run e2e tests (include=all to include long scenarios)
+ifeq ($(include),all)
+	cd web && npm run test:e2e
+else
 	cd web && npm run test:e2e -- --grep-invert "@timeout-"
+endif
