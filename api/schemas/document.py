@@ -14,7 +14,7 @@ class GenerateDocumentRequest(BaseModel):
         context: User-provided context or questions for generation.
     """
 
-    reference_ids: list[str] = Field(alias="referenceIds")
+    reference_ids: list[str] = Field(alias="referenceIds", min_length=1, max_length=20)
     context: str = Field(max_length=5000)
 
     model_config = {"populate_by_name": True}
