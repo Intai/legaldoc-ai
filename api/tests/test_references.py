@@ -249,6 +249,36 @@ class TestCreateReference:
         assert len(call_kwargs["description"]) == 200
 
     @pytest.mark.asyncio
+    async def test_rejects_pdf_with_invalid_magic_bytes(self, client):
+        """Test that a file with .pdf extension but invalid content is rejected."""
+        resp = await client.post(
+            "/api/v1/references",
+            files={"file": ("broken.pdf", b"not-a-pdf", "application/pdf")},
+        )
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["data"] is None
+        assert body["error"]["code"] == "INVALID_FILE_CONTENT"
+
+    @pytest.mark.asyncio
+    async def test_rejects_file_exceeding_size_limit(self, client):
+        """Test that a file larger than 10 MB is rejected."""
+        with patch(
+            "api.routes.v1.endpoints.references.MAX_FILE_SIZE",
+            1,
+        ):
+            resp = await client.post(
+                "/api/v1/references",
+                files={"file": ("big.pdf", b"%PDF-large", "application/pdf")},
+            )
+
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["data"] is None
+        assert body["error"]["code"] == "FILE_TOO_LARGE"
+
+    @pytest.mark.asyncio
     async def test_handles_extraction_error(self, client):
         """Test that a text extraction failure returns EXTRACTION_ERROR."""
         with patch(
@@ -257,7 +287,7 @@ class TestCreateReference:
         ):
             resp = await client.post(
                 "/api/v1/references",
-                files={"file": ("broken.pdf", b"not-a-pdf", "application/pdf")},
+                files={"file": ("broken.pdf", b"%PDF-corrupt", "application/pdf")},
             )
 
         assert resp.status_code == 201

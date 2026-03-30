@@ -15,7 +15,7 @@ class GenerateDocumentRequest(BaseModel):
     """
 
     reference_ids: list[str] = Field(alias="referenceIds")
-    context: str
+    context: str = Field(max_length=5000)
 
     model_config = {"populate_by_name": True}
 

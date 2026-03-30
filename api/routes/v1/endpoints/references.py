@@ -19,6 +19,7 @@ from api.schemas.reference import (
 router = APIRouter(prefix="/references", tags=["references"])
 
 SUPPORTED_EXTENSIONS = {".pdf", ".txt"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
 def _serialize_reference(ref: ReferenceModel) -> ReferenceResponse:
@@ -108,6 +109,22 @@ async def create_reference(file: UploadFile) -> ReferenceCreateResponse:
 
     title = Path(filename).stem
     content = await file.read()
+
+    if len(content) > MAX_FILE_SIZE:
+        return ReferenceCreateResponse(
+            error=ErrorDetail(
+                message="File size exceeds the 10 MB limit.",
+                code="FILE_TOO_LARGE",
+            ),
+        )
+
+    if ext == ".pdf" and content[:4] != b"%PDF":
+        return ReferenceCreateResponse(
+            error=ErrorDetail(
+                message="File does not appear to be a valid PDF.",
+                code="INVALID_FILE_CONTENT",
+            ),
+        )
 
     try:
         if ext == ".pdf":
