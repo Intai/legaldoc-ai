@@ -7,7 +7,7 @@ provider = os.environ.get("LANGGRAPH_LLM_PROVIDER", "anthropic")
 
 if provider == "openrouter":
     finalize_llm = ChatOpenAI(
-        model="nvidia/nemotron-3-super-120b-a12b:free",
+        model="nvidia/nemotron-3-nano-30b-a3b:free",
         temperature=0,
         base_url="https://openrouter.ai/api/v1",
         api_key=os.environ["OPENROUTER_API_KEY"],
