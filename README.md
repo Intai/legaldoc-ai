@@ -59,10 +59,10 @@ The document generation pipeline processes user-provided reference PDFs and cont
 
 | Node | Purpose |
 |---|---|
-| **Analyze** | Extracts key parties, legal terms, clauses, obligations, and dates from reference documents. Classifies the document type (Contract, Policy, Employment, or NDA) and suggests a title. |
-| **Structure** | Creates a hierarchical outline covering preamble, recitals, definitions, substantive sections, standard legal provisions, and execution blocks. |
-| **Draft** | Writes professional legal prose for every section using proper conventions ("shall" for obligations, "may" for permissions, numbered subsections, and cross-references). |
-| **Finalize** | Reviews the draft for consistency (cross-references, defined terms, party names), then outputs structured JSON sections ready for rendering. |
+| [**Analyze**](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/analyze.txt) | Extracts key parties, legal terms, clauses, obligations, and dates from reference documents. Classifies the document type (Contract, Policy, Employment, or NDA) and suggests a title. |
+| [**Structure**](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/structure.txt) | Creates a hierarchical outline covering preamble, recitals, definitions, substantive sections, standard legal provisions, and execution blocks. |
+| [**Draft**](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/draft.txt) | Writes professional legal prose for every section using proper conventions ("shall" for obligations, "may" for permissions, numbered subsections, and cross-references). |
+| [**Finalize**](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/finalize.txt) | Reviews the draft for consistency (cross-references, defined terms, party names), then outputs structured JSON sections ready for rendering. |
 
 ```
 ┌──────────────────────────────────────────────────────────┐
