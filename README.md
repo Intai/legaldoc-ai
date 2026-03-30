@@ -5,7 +5,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 ## Prerequisites
 
 - Python 3.13
-- Node 22
+- Node.js 22
 
 ## Local Development
 
@@ -29,7 +29,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
    python3.13 -m venv .venv
    source .venv/bin/activate
    ```
-6. `make dev` to start http://localhost:8080
+6. `make dev` to start dev server at http://localhost:8080
    - `make db-seed` to seed the MongoDB database with mock data.
    - `make install` to install dependencies.
    - `make lint` to run linters.
