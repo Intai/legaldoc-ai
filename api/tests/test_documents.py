@@ -706,7 +706,8 @@ class TestGetDocumentPdf:
         assert resp.headers["content-type"] == "application/pdf"
         assert (
             resp.headers["content-disposition"]
-            == 'attachment; filename="My Contract.pdf"'
+            == "attachment; filename=\"My Contract.pdf\"; "
+            "filename*=UTF-8''My%20Contract.pdf"
         )
         assert resp.content == pdf_bytes
 

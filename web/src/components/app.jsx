@@ -5,7 +5,9 @@ import '../i18n'
 import AppShell from './app-shell'
 import { GlobalDialog } from './global-dialog'
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+// Worker version must match react-pdf's bundled pdfjs-dist version.
+// Copied from node_modules/react-pdf/node_modules/pdfjs-dist/build/.
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 
 const DocumentsPage = lazy(() => import('../documents/components/documents-page'))
 const NewDocumentPage = lazy(() => import('../documents/components/new-document-page'))

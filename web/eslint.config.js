@@ -8,6 +8,7 @@ const eslintConfig = defineConfig([
   js.configs.recommended,
   globalIgnores([
     'dist/**',
+    'public/**',
     'node_modules/**',
     '**/docs/*',
     '**/shadcn/**',

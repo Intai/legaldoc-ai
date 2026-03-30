@@ -1,8 +1,7 @@
 import base64
-
-from langchain_core.messages import HumanMessage
 from typing import Literal
 
+from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
 from langraph.models.analyze_llm import analyze_llm

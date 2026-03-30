@@ -6,6 +6,7 @@ import io
 import json
 from datetime import datetime
 from enum import StrEnum
+from urllib.parse import quote
 
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Query
@@ -280,7 +281,11 @@ async def get_document_pdf(id: str) -> Response | DocumentDetailResponse:
         content=doc.pdf_content,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="{doc.title}.pdf"',
+            "Content-Disposition": (
+                "attachment; "
+                f'filename="{doc.title.encode("ascii", "ignore").decode()}.pdf"; '
+                f"filename*=UTF-8''{quote(doc.title)}.pdf"
+            ),
         },
     )
 

@@ -5,3 +5,5 @@ npm test -- --passWithNoTests
 cd ..
 .venv/bin/ruff check api/
 .venv/bin/pytest api/tests/ --tb=short -q
+.venv/bin/ruff check langraph/
+.venv/bin/pytest langraph/tests/ --tb=short -q
