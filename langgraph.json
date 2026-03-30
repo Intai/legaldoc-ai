@@ -1,0 +1,7 @@
+{
+  "dependencies": ["./langraph"],
+  "graphs": {
+    "forecast": "./langraph/app/graph.py:build_graph"
+  },
+  "env": ".env"
+}

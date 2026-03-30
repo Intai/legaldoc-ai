@@ -113,7 +113,7 @@ export const useNewDocumentStore = create((set, get) => ({
 
   generateDocument: () => {
     const { selectedReferenceIds, context } = get()
-    set({ generationPhase: PHASE_ANALYZING, currentStep: 3 })
+    set({ generationPhase: PHASE_ANALYZING, generatedDocumentId: null, currentStep: 3 })
 
     const subscription = fetchSSE('/v1/documents/generate', {
       referenceIds: [...selectedReferenceIds],

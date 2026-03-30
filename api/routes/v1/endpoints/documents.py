@@ -285,11 +285,21 @@ async def get_document_pdf(id: str) -> Response | DocumentDetailResponse:
     )
 
 
-def _build_nda_pdf(title: str) -> tuple[bytes, int]:
-    """Generate a hardcoded NDA PDF document using reportlab.
+def build_pdf(title: str, sections: list[dict]) -> tuple[bytes, int]:
+    """Generate a PDF from structured sections using reportlab.
+
+    Each section has a ``heading`` string and a ``content`` list of blocks.
+    Supported block types:
+
+    - ``paragraph`` – plain body text
+    - ``bold`` – bold body text
+    - ``italic`` – italic body text
+    - ``list`` – bullet-point list with an ``items`` list of strings
 
     Args:
-        title: The document title to display in the PDF header.
+        title: The document title displayed at the top of the PDF.
+        sections: A list of dicts, each with ``heading`` (str) and
+            ``content`` (list of block dicts).
 
     Returns:
         A tuple of (pdf_bytes, page_count).
@@ -297,7 +307,13 @@ def _build_nda_pdf(title: str) -> tuple[bytes, int]:
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+    from reportlab.platypus import (
+        ListFlowable,
+        ListItem,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+    )
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -311,91 +327,66 @@ def _build_nda_pdf(title: str) -> tuple[bytes, int]:
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
-        "NDATitle",
+        "DocTitle",
         parent=styles["Title"],
         fontSize=18,
         spaceAfter=20,
     )
     heading_style = ParagraphStyle(
-        "NDAHeading",
+        "DocHeading",
         parent=styles["Heading2"],
         fontSize=13,
         spaceAfter=8,
         spaceBefore=14,
     )
     body_style = ParagraphStyle(
-        "NDABody",
+        "DocBody",
         parent=styles["BodyText"],
         fontSize=11,
         leading=15,
         spaceAfter=6,
+    )
+    bold_style = ParagraphStyle(
+        "DocBold",
+        parent=body_style,
+        fontName="Helvetica-Bold",
+    )
+    italic_style = ParagraphStyle(
+        "DocItalic",
+        parent=body_style,
+        fontName="Helvetica-Oblique",
     )
 
     elements: list = []
     elements.append(Paragraph(title, title_style))
     elements.append(Spacer(1, 12))
 
-    sections = [
-        (
-            "1. Definition of Confidential Information",
-            (
-                '"Confidential Information" means any non-public information '
-                "disclosed by either party to the other, whether orally, in "
-                "writing, or by inspection of tangible objects, that is "
-                "designated as confidential or that reasonably should be "
-                "understood to be confidential."
-            ),
-        ),
-        (
-            "2. Obligations of Receiving Party",
-            (
-                "The Receiving Party shall hold and maintain the Confidential "
-                "Information in strict confidence, using the same degree of "
-                "care that it uses to protect its own confidential information, "
-                "but in no event less than reasonable care."
-            ),
-        ),
-        (
-            "3. Exclusions from Confidential Information",
-            (
-                "Confidential Information does not include information that: "
-                "(a) is or becomes publicly available through no fault of the "
-                "Receiving Party; (b) was known to the Receiving Party prior to "
-                "disclosure; (c) is independently developed without use of "
-                "Confidential Information; or (d) is rightfully obtained from "
-                "a third party without restriction."
-            ),
-        ),
-        (
-            "4. Term and Termination",
-            (
-                "This Agreement shall remain in effect for a period of two (2) "
-                "years from the date of execution. Either party may terminate "
-                "this Agreement with thirty (30) days written notice."
-            ),
-        ),
-        (
-            "5. Return of Materials",
-            (
-                "Upon termination or request, the Receiving Party shall "
-                "promptly return or destroy all materials containing "
-                "Confidential Information and certify in writing that it has "
-                "done so."
-            ),
-        ),
-        (
-            "6. Governing Law",
-            (
-                "This Agreement shall be governed by and construed in "
-                "accordance with the laws of the State of Delaware, without "
-                "regard to its conflict of laws principles."
-            ),
-        ),
-    ]
+    for section in sections:
+        heading = section.get("heading", "")
+        if heading:
+            elements.append(Paragraph(heading, heading_style))
 
-    for heading, body in sections:
-        elements.append(Paragraph(heading, heading_style))
-        elements.append(Paragraph(body, body_style))
+        for block in section.get("content", []):
+            block_type = block.get("type", "")
+            if block_type == "paragraph":
+                elements.append(Paragraph(block.get("text", ""), body_style))
+            elif block_type == "bold":
+                elements.append(Paragraph(block.get("text", ""), bold_style))
+            elif block_type == "italic":
+                elements.append(Paragraph(block.get("text", ""), italic_style))
+            elif block_type == "list":
+                items = block.get("items", [])
+                if items:
+                    elements.append(
+                        ListFlowable(
+                            [
+                                ListItem(Paragraph(item, body_style))
+                                for item in items
+                            ],
+                            bulletType="bullet",
+                            start="bulletchar",
+                        )
+                    )
 
     page_counter: list[int] = [0]
 
@@ -407,12 +398,14 @@ def _build_nda_pdf(title: str) -> tuple[bytes, int]:
 
 
 async def _generate_events(request: GenerateDocumentRequest):
-    """Yield SSE phase events with simulated delays, then a complete event.
+    """Yield SSE phase events from the LangGraph workflow, then a complete event.
 
-    Looks up references, creates a DocumentModel, generates a PDF, and
-    streams progress events to the client.
+    Looks up references, runs the compiled graph as a background task,
+    streams progress phase events from an asyncio.Queue, builds the PDF
+    from the graph result, creates a DocumentModel, and yields the final
+    complete event.
     """
-    phases = ["analyzing", "structuring", "drafting", "finalizing"]
+    from langraph.app.graph import build_graph
 
     try:
         # Look up references
@@ -433,37 +426,59 @@ async def _generate_events(request: GenerateDocumentRequest):
             }
             return
 
-        title = ", ".join(ref.title for ref in references)
-        doc_type = references[0].type
-        description = request.context[:200]
-
-        # Emit phase events with simulated delays
-        for phase in phases[:-1]:
-            yield {"event": "phase", "data": json.dumps({"phase": phase})}
-            await asyncio.sleep(1.5)
-
-        # Generate PDF
-        pdf_bytes, page_count = _build_nda_pdf(title)
-
-        # Create document
-        doc = DocumentModel(
-            title=title,
-            type=doc_type,
-            status=DocumentStatus.DRAFT,
-            description=description,
-            page_count=page_count,
-            pdf_content=pdf_bytes,
-        )
-        await doc.insert()
-
-        # Final phase
-        yield {"event": "phase", "data": json.dumps({"phase": phases[-1]})}
-        await asyncio.sleep(1.0)
-
-        yield {
-            "event": "complete",
-            "data": json.dumps({"documentId": str(doc.id)}),
+        # Build initial state with phase callback queue
+        queue: asyncio.Queue = asyncio.Queue()
+        state = {
+            "references": [
+                ref.pdf_content for ref in references if ref.pdf_content
+            ],
+            "context": request.context,
+            "phase_callback": queue,
         }
+
+        # Compile and run graph in background
+        graph = build_graph()
+
+        async def run_graph():
+            try:
+                result = await graph.ainvoke(state)
+                await queue.put(("complete", result))
+            except Exception as exc:
+                await queue.put(("error", exc))
+
+        task = asyncio.create_task(run_graph())
+
+        # Yield SSE events from queue
+        while True:
+            event = await queue.get()
+            if isinstance(event, tuple) and event[0] == "complete":
+                result = event[1]
+                # Build PDF from graph result
+                pdf_bytes, page_count = build_pdf(
+                    result["title"], result["sections"]
+                )
+                # Create document
+                doc = DocumentModel(
+                    title=result["title"],
+                    type=result["doc_type"],
+                    status=DocumentStatus.DRAFT,
+                    description=result.get("description", request.context[:200]),
+                    page_count=page_count,
+                    pdf_content=pdf_bytes,
+                )
+                await doc.insert()
+                yield {
+                    "event": "complete",
+                    "data": json.dumps({"documentId": str(doc.id)}),
+                }
+                break
+            elif isinstance(event, tuple) and event[0] == "error":
+                raise event[1]
+            else:
+                # Phase event from a node
+                yield {"event": "phase", "data": json.dumps({"phase": event})}
+
+        await task  # ensure no exceptions are lost
 
     except Exception as exc:
         yield {

@@ -5,10 +5,10 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: key => {
       const translations = {
-        'newDocument.phaseAnalyzing': 'Analyzing references...',
-        'newDocument.phaseStructuring': 'Structuring document...',
-        'newDocument.phaseDrafting': 'Drafting content...',
-        'newDocument.phaseFinalizing': 'Finalizing document...',
+        'newDocument.phaseAnalyzing': 'Analyzing references',
+        'newDocument.phaseStructuring': 'Structuring document',
+        'newDocument.phaseDrafting': 'Drafting content',
+        'newDocument.phaseFinalizing': 'Finalizing document',
       }
       return translations[key] || key
     },
@@ -27,10 +27,10 @@ describe('PhaseProgress', () => {
   it('renders all four phases with pending icons when currentPhase is null', () => {
     render(<PhaseProgress currentPhase={null} />)
     expect(screen.getByTestId('phase-progress')).toBeInTheDocument()
-    expect(screen.getByText('Analyzing references...')).toBeInTheDocument()
-    expect(screen.getByText('Structuring document...')).toBeInTheDocument()
-    expect(screen.getByText('Drafting content...')).toBeInTheDocument()
-    expect(screen.getByText('Finalizing document...')).toBeInTheDocument()
+    expect(screen.getByText('Analyzing references')).toBeInTheDocument()
+    expect(screen.getByText('Structuring document')).toBeInTheDocument()
+    expect(screen.getByText('Drafting content')).toBeInTheDocument()
+    expect(screen.getByText('Finalizing document')).toBeInTheDocument()
     expect(screen.getAllByTestId('phase-icon-pending')).toHaveLength(4)
     expect(screen.queryByTestId('phase-icon-check')).not.toBeInTheDocument()
     expect(screen.queryByTestId('phase-icon-spinner')).not.toBeInTheDocument()

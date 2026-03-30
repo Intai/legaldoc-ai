@@ -16,7 +16,8 @@ services:
   api:
     build:
       context: ./api
-      dockerfile: Dockerfile
+      additional_contexts:
+        langraph: ./langraph
     restart: unless-stopped
     env_file: .env
     environment:
@@ -25,10 +26,17 @@ services:
       MONGODB_DB_NAME: ${MONGODB_DB_NAME}
       MONGODB_HOST: mongodb
       MONGODB_PORT: "27017"
+      LANGGRAPH_LLM_PROVIDER: ${LANGGRAPH_LLM_PROVIDER}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT}
+      LANGCHAIN_TRACING_V2: true
     ports:
       - "8000:8000"
     volumes:
       - ./api:/srv/api
+      - ./langraph:/srv/langraph
     depends_on:
       - mongodb
 

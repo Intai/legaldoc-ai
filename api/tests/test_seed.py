@@ -105,6 +105,22 @@ class TestSampleReferences:
                 f"Missing created_at for: {ref['title']}"
             )
 
+    def test_every_reference_has_pdf_content(self):
+        """Every seed reference should have generated PDF bytes."""
+        for ref in SAMPLE_REFERENCES:
+            assert ref.get("pdf_content") is not None, (
+                f"Missing pdf_content for: {ref['title']}"
+            )
+            assert isinstance(ref["pdf_content"], bytes)
+            assert ref["pdf_content"][:5] == b"%PDF-"
+
+    def test_legal_content_exists_for_all_reference_titles(self):
+        """Every reference title should have a matching legal content entry."""
+        for ref in SAMPLE_REFERENCES:
+            assert ref["title"] in LEGAL_CONTENT, (
+                f"Missing legal content for: {ref['title']}"
+            )
+
 
 class TestGeneratePdf:
     """Validate the PDF generation helper."""

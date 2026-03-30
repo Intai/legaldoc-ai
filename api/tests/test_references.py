@@ -170,6 +170,10 @@ class TestCreateReference:
         assert body["data"]["title"] == "agreement"
         assert body["data"]["type"] == "Contract"
 
+        # Verify pdf_content stores the raw file bytes
+        call_kwargs = mock_cls.call_args[1]
+        assert call_kwargs["pdf_content"] == text_content.encode()
+
     @pytest.mark.asyncio
     async def test_uploads_pdf_file_successfully(self, client):
         """Test that uploading a PDF file extracts text and creates a reference."""
@@ -187,7 +191,7 @@ class TestCreateReference:
             patch(
                 "api.routes.v1.endpoints.references.ReferenceModel",
                 return_value=ref,
-            ),
+            ) as mock_cls,
         ):
             ref.insert = AsyncMock()
             resp = await client.post(
@@ -199,6 +203,10 @@ class TestCreateReference:
         body = resp.json()
         assert body["error"] is None
         assert body["data"]["title"] == "contract"
+
+        # Verify pdf_content stores the raw uploaded bytes
+        call_kwargs = mock_cls.call_args[1]
+        assert call_kwargs["pdf_content"] == b"%PDF-fake"
 
     @pytest.mark.asyncio
     async def test_rejects_unsupported_file_type(self, client):

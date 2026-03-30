@@ -1,0 +1,49 @@
+# version control
+.git
+.gitignore
+.husky
+
+# dependencies (reinstalled via npm ci)
+node_modules
+
+# build artifacts
+dist
+coverage
+playwright-report
+test-results
+
+# environment files
+.env
+.env.local
+.env.example
+
+# documentation
+README.md
+
+# editor configs
+.vscode
+
+# devops (not needed inside image)
+k8s
+skaffold.yaml
+docker-compose.yml
+Makefile
+
+# testing configs
+jest.config.js
+jest.setup.js
+playwright.config.js
+
+# python caches
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.ruff_cache
+*.egg-info
+.coverage
+.coverage.*
+
+# misc
+.DS_Store
+.nvmrc

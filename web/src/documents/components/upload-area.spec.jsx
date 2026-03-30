@@ -11,7 +11,7 @@ jest.mock('react-i18next', () => ({
 }))
 
 jest.mock('lucide-react', () => ({
-  Upload: props => <svg data-testid={props['data-testid']} />,
+  CloudUpload: props => <svg data-testid={props['data-testid']} />,
 }))
 
 jest.mock('../../stores/new-document-store.js', () => ({

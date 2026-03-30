@@ -1,7 +1,7 @@
 import React from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useTranslation } from 'react-i18next'
-import { Upload } from 'lucide-react'
+import { CloudUpload } from 'lucide-react'
 import { useNewDocumentStore } from '../../stores/new-document-store.js'
 
 function UploadArea() {
@@ -31,7 +31,7 @@ function UploadArea() {
       }`}
     >
       <input {...getInputProps()} data-testid="upload-input" />
-      <Upload
+      <CloudUpload
         size={36}
         strokeWidth={1.5}
         className="text-primary-400 mb-3"

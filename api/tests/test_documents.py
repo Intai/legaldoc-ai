@@ -2,6 +2,8 @@
 
 import base64
 import json
+import sys
+import types
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,6 +14,16 @@ from httpx import ASGITransport, AsyncClient
 from api.main import create_app
 from api.models.document import DocumentModel, DocumentStatus, DocumentType
 from api.models.reference import ReferenceModel
+
+# Pre-seed sys.modules with a mock langraph.app.graph to prevent importing
+# the real module (which requires an Anthropic API key).
+if "langraph" not in sys.modules:
+    sys.modules["langraph"] = types.ModuleType("langraph")
+if "langraph.app" not in sys.modules:
+    sys.modules["langraph.app"] = types.ModuleType("langraph.app")
+_mock_graph_module = types.ModuleType("langraph.app.graph")
+_mock_graph_module.build_graph = MagicMock()  # type: ignore[attr-defined]
+sys.modules["langraph.app.graph"] = _mock_graph_module
 
 
 def _make_cursor(payload: dict) -> str:
@@ -69,18 +81,210 @@ def client(app):
     return AsyncClient(transport=transport, base_url="http://test")
 
 
-class TestBuildNdaPdf:
-    """Tests for the _build_nda_pdf helper function."""
+class TestBuildPdf:
+    """Tests for the build_pdf general helper function."""
 
     def test_returns_valid_pdf_bytes_and_page_count(self):
-        """Test that _build_nda_pdf returns PDF bytes starting with %PDF."""
-        from api.routes.v1.endpoints.documents import _build_nda_pdf
+        """Test that build_pdf returns PDF bytes starting with %PDF."""
+        from api.routes.v1.endpoints.documents import build_pdf
 
-        pdf_bytes, page_count = _build_nda_pdf("Test NDA")
+        sections = [
+            {
+                "heading": "Section One",
+                "content": [
+                    {"type": "paragraph", "text": "Hello world."},
+                ],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Test Title", sections)
 
         assert isinstance(pdf_bytes, bytes)
         assert pdf_bytes.startswith(b"%PDF")
         assert page_count >= 1
+
+    def test_paragraph_block(self):
+        """Test that a paragraph block produces valid PDF output."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Heading",
+                "content": [{"type": "paragraph", "text": "Body text."}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_bold_block(self):
+        """Test that a bold block produces valid PDF output."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Heading",
+                "content": [{"type": "bold", "text": "Bold text."}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_italic_block(self):
+        """Test that an italic block produces valid PDF output."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Heading",
+                "content": [{"type": "italic", "text": "Italic text."}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_list_block(self):
+        """Test that a list block produces valid PDF output with bullet items."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Heading",
+                "content": [
+                    {"type": "list", "items": ["Item one", "Item two", "Item three"]},
+                ],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_list_block_with_empty_items(self):
+        """Test that a list block with no items does not add a ListFlowable."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Heading",
+                "content": [{"type": "list", "items": []}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_mixed_content_blocks(self):
+        """Test that multiple block types in one section produce valid output."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Mixed Section",
+                "content": [
+                    {"type": "paragraph", "text": "Normal text."},
+                    {"type": "bold", "text": "Bold text."},
+                    {"type": "italic", "text": "Italic text."},
+                    {"type": "list", "items": ["A", "B"]},
+                ],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_multiple_sections(self):
+        """Test that multiple sections each get their own heading."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "First",
+                "content": [{"type": "paragraph", "text": "Body 1."}],
+            },
+            {
+                "heading": "Second",
+                "content": [{"type": "paragraph", "text": "Body 2."}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_empty_sections(self):
+        """Test that an empty sections list produces a valid PDF with just the title."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        pdf_bytes, page_count = build_pdf("Title Only", [])
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_section_without_heading(self):
+        """Test that a section with an empty heading skips the heading flowable."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "",
+                "content": [{"type": "paragraph", "text": "No heading."}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_section_with_empty_content(self):
+        """Test that a section with no content blocks still renders heading."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {"heading": "Empty Content", "content": []},
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_unknown_block_type_is_ignored(self):
+        """Test that an unrecognised block type is silently skipped."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Heading",
+                "content": [{"type": "unknown", "text": "Ignored."}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+    def test_block_missing_text_key(self):
+        """Test that a paragraph block without text key uses empty string."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Heading",
+                "content": [{"type": "paragraph"}],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
+
+
 
 
 class TestListDocuments:
@@ -556,6 +760,7 @@ def _make_ref(
     title="NDA Template",
     ref_type=DocumentType.NDA,
     description="A reference.",
+    pdf_content=b"fake-pdf-bytes",
     ref_id="607f1f77bcf86cd799439011",
 ):
     """Create a mock ReferenceModel instance."""
@@ -564,6 +769,7 @@ def _make_ref(
     ref.title = title
     ref.type = ref_type
     ref.description = description
+    ref.pdf_content = pdf_content
     ref.created_at = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
     return ref
 
@@ -585,6 +791,51 @@ def _parse_sse_events(text: str) -> list[dict]:
     return events
 
 
+def _make_graph_result(
+    *,
+    title="NDA Template",
+    doc_type="NDA",
+    description="Generated description",
+    sections=None,
+):
+    """Create a graph result dict matching GenerateDocumentState output."""
+    if sections is None:
+        sections = [
+            {
+                "heading": "Section 1",
+                "content": [{"type": "paragraph", "text": "Body text."}],
+            },
+        ]
+    return {
+        "title": title,
+        "doc_type": doc_type,
+        "description": description,
+        "sections": sections,
+    }
+
+
+def _mock_build_graph(result, phases=None):
+    """Create a mock build_graph that emits phases and returns result.
+
+    The mock graph's ainvoke puts phase strings into the queue from state,
+    then puts the ("complete", result) sentinel.
+    """
+    if phases is None:
+        phases = ["analyzing", "structuring", "drafting", "finalizing"]
+
+    mock_graph = MagicMock()
+
+    async def mock_ainvoke(state):
+        queue = state["phase_callback"]
+        for phase in phases:
+            await queue.put(phase)
+        return result
+
+    mock_graph.ainvoke = mock_ainvoke
+    mock_build = MagicMock(return_value=mock_graph)
+    return mock_build
+
+
 class TestParseSseEvents:
     """Tests for _parse_sse_events helper."""
 
@@ -603,6 +854,7 @@ class TestGenerateDocument:
         ref = _make_ref()
         mock_doc = MagicMock(spec=DocumentModel)
         mock_doc.id = "507f1f77bcf86cd799439011"
+        graph_result = _make_graph_result()
 
         with (
             patch.object(
@@ -611,18 +863,16 @@ class TestGenerateDocument:
                 new_callable=AsyncMock,
                 return_value=ref,
             ),
-            patch.object(
-                DocumentModel,
-                "insert",
-                new_callable=AsyncMock,
-                return_value=None,
-            ),
             patch(
                 "api.routes.v1.endpoints.documents.DocumentModel",
             ) as MockDocCls,
             patch(
-                "api.routes.v1.endpoints.documents.asyncio.sleep",
-                new_callable=AsyncMock,
+                "langraph.app.graph.build_graph",
+                _mock_build_graph(graph_result),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 2),
             ),
         ):
             MockDocCls.return_value = mock_doc
@@ -652,72 +902,16 @@ class TestGenerateDocument:
         assert "documentId" in complete_data
 
     @pytest.mark.asyncio
-    async def test_joins_reference_titles(self, client):
-        """Test that document title is formed by joining reference titles."""
-        ref1 = _make_ref(title="NDA Template", ref_id="607f1f77bcf86cd799439011")
-        ref2 = _make_ref(
-            title="Privacy Policy",
-            ref_type=DocumentType.POLICY,
-            ref_id="607f1f77bcf86cd799439012",
-        )
-
-        created_doc = MagicMock(spec=DocumentModel)
-        created_doc.id = "507f1f77bcf86cd799439011"
-
-        async def mock_get(rid):
-            mapping = {
-                PydanticObjectId("607f1f77bcf86cd799439011"): ref1,
-                PydanticObjectId("607f1f77bcf86cd799439012"): ref2,
-            }
-            return mapping.get(rid)
-
-        with (
-            patch.object(ReferenceModel, "get", side_effect=mock_get),
-            patch(
-                "api.routes.v1.endpoints.documents.DocumentModel",
-            ) as MockDocCls,
-            patch(
-                "api.routes.v1.endpoints.documents.asyncio.sleep",
-                new_callable=AsyncMock,
-            ),
-        ):
-            created_doc.insert = AsyncMock(return_value=None)
-            MockDocCls.return_value = created_doc
-            MockDocCls.return_value.insert = AsyncMock(return_value=None)
-
-            # Capture constructor args
-            call_args = {}
-
-            def capture_init(**kwargs):
-                call_args.update(kwargs)
-                return created_doc
-
-            MockDocCls.side_effect = capture_init
-
-            resp = await client.post(
-                "/api/v1/documents/generate",
-                json={
-                    "referenceIds": [
-                        "607f1f77bcf86cd799439011",
-                        "607f1f77bcf86cd799439012",
-                    ],
-                    "context": "Multi-reference context.",
-                },
-            )
-
-        assert resp.status_code == 200
-        assert call_args["title"] == "NDA Template, Privacy Policy"
-        assert call_args["type"] == DocumentType.NDA
-        assert call_args["status"] == DocumentStatus.DRAFT
-
-    @pytest.mark.asyncio
-    async def test_truncates_context_to_200_chars(self, client):
-        """Test that the description is truncated to 200 characters."""
+    async def test_creates_document_from_graph_result(self, client):
+        """Test that document is created with title and type from graph result."""
         ref = _make_ref()
         created_doc = MagicMock(spec=DocumentModel)
         created_doc.id = "507f1f77bcf86cd799439011"
-
-        long_context = "A" * 300
+        graph_result = _make_graph_result(
+            title="Generated Title",
+            doc_type="Contract",
+            description="Generated desc",
+        )
 
         with (
             patch.object(
@@ -730,8 +924,76 @@ class TestGenerateDocument:
                 "api.routes.v1.endpoints.documents.DocumentModel",
             ) as MockDocCls,
             patch(
-                "api.routes.v1.endpoints.documents.asyncio.sleep",
+                "langraph.app.graph.build_graph",
+                _mock_build_graph(graph_result),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 3),
+            ),
+        ):
+            call_args = {}
+
+            def capture_init(**kwargs):
+                call_args.update(kwargs)
+                return created_doc
+
+            MockDocCls.side_effect = capture_init
+            created_doc.insert = AsyncMock(return_value=None)
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Some context.",
+                },
+            )
+
+        assert resp.status_code == 200
+        assert call_args["title"] == "Generated Title"
+        assert call_args["type"] == "Contract"
+        assert call_args["status"] == DocumentStatus.DRAFT
+        assert call_args["description"] == "Generated desc"
+        assert call_args["page_count"] == 3
+        assert call_args["pdf_content"] == b"%PDF-fake"
+
+    @pytest.mark.asyncio
+    async def test_uses_context_fallback_when_no_description(self, client):
+        """Test that description falls back to truncated context when missing."""
+        ref = _make_ref()
+        created_doc = MagicMock(spec=DocumentModel)
+        created_doc.id = "507f1f77bcf86cd799439011"
+        long_context = "B" * 300
+
+        # Graph result without description key
+        graph_result = {
+            "title": "Title",
+            "doc_type": "NDA",
+            "sections": [
+                {
+                    "heading": "S1",
+                    "content": [{"type": "paragraph", "text": "Text."}],
+                },
+            ],
+        }
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
                 new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "langraph.app.graph.build_graph",
+                _mock_build_graph(graph_result),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 1),
             ),
         ):
             call_args = {}
@@ -757,17 +1019,11 @@ class TestGenerateDocument:
     @pytest.mark.asyncio
     async def test_returns_error_when_no_valid_references(self, client):
         """Test that an error event is emitted when no references are found."""
-        with (
-            patch.object(
-                ReferenceModel,
-                "get",
-                new_callable=AsyncMock,
-                return_value=None,
-            ),
-            patch(
-                "api.routes.v1.endpoints.documents.asyncio.sleep",
-                new_callable=AsyncMock,
-            ),
+        with patch.object(
+            ReferenceModel,
+            "get",
+            new_callable=AsyncMock,
+            return_value=None,
         ):
             resp = await client.post(
                 "/api/v1/documents/generate",
@@ -785,19 +1041,13 @@ class TestGenerateDocument:
         assert error_data["code"] == "NOT_FOUND"
 
     @pytest.mark.asyncio
-    async def test_returns_error_on_exception(self, client):
-        """Test that an exception during generation emits an error event."""
-        with (
-            patch.object(
-                ReferenceModel,
-                "get",
-                new_callable=AsyncMock,
-                side_effect=RuntimeError("db failure"),
-            ),
-            patch(
-                "api.routes.v1.endpoints.documents.asyncio.sleep",
-                new_callable=AsyncMock,
-            ),
+    async def test_returns_error_on_reference_lookup_exception(self, client):
+        """Test that an exception during reference lookup emits an error event."""
+        with patch.object(
+            ReferenceModel,
+            "get",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("db failure"),
         ):
             resp = await client.post(
                 "/api/v1/documents/generate",
@@ -815,11 +1065,68 @@ class TestGenerateDocument:
         assert error_data["code"] == "INTERNAL_ERROR"
 
     @pytest.mark.asyncio
-    async def test_generates_valid_pdf(self, client):
-        """Test that the generated PDF content is valid."""
+    async def test_returns_error_on_graph_exception(self, client):
+        """Test that a graph execution error emits an error event."""
         ref = _make_ref()
-        created_doc = MagicMock(spec=DocumentModel)
-        created_doc.id = "507f1f77bcf86cd799439011"
+
+        mock_graph = MagicMock()
+
+        async def failing_ainvoke(state):
+            queue = state["phase_callback"]
+            await queue.put("analyzing")
+            raise RuntimeError("LLM failure")
+
+        mock_graph.ainvoke = failing_ainvoke
+        mock_build = MagicMock(return_value=mock_graph)
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "langraph.app.graph.build_graph",
+                mock_build,
+            ),
+        ):
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Some context",
+                },
+            )
+
+        assert resp.status_code == 200
+        events = _parse_sse_events(resp.text)
+        # Should have at least the analyzing phase before the error
+        phase_events = [e for e in events if e.get("event") == "phase"]
+        assert len(phase_events) >= 1
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) == 1
+        error_data = json.loads(error_events[0]["data"])
+        assert error_data["code"] == "INTERNAL_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_passes_pdf_content_to_graph_state(self, client):
+        """Test that reference pdf_content bytes are passed to graph state."""
+        ref = _make_ref(pdf_content=b"real-pdf-bytes")
+        mock_doc = MagicMock(spec=DocumentModel)
+        mock_doc.id = "507f1f77bcf86cd799439011"
+
+        captured_state = {}
+        mock_graph = MagicMock()
+
+        async def capturing_ainvoke(state):
+            captured_state.update(state)
+            queue = state["phase_callback"]
+            await queue.put("analyzing")
+            return _make_graph_result()
+
+        mock_graph.ainvoke = capturing_ainvoke
+        mock_build = MagicMock(return_value=mock_graph)
 
         with (
             patch.object(
@@ -832,27 +1139,124 @@ class TestGenerateDocument:
                 "api.routes.v1.endpoints.documents.DocumentModel",
             ) as MockDocCls,
             patch(
-                "api.routes.v1.endpoints.documents.asyncio.sleep",
-                new_callable=AsyncMock,
+                "langraph.app.graph.build_graph",
+                mock_build,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 1),
             ),
         ):
-            call_args = {}
-
-            def capture_init(**kwargs):
-                call_args.update(kwargs)
-                return created_doc
-
-            MockDocCls.side_effect = capture_init
-            created_doc.insert = AsyncMock(return_value=None)
+            MockDocCls.return_value = mock_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
 
             resp = await client.post(
                 "/api/v1/documents/generate",
                 json={
                     "referenceIds": ["607f1f77bcf86cd799439011"],
-                    "context": "NDA context",
+                    "context": "Test context",
                 },
             )
 
         assert resp.status_code == 200
-        assert call_args["pdf_content"].startswith(b"%PDF")
-        assert call_args["page_count"] >= 1
+        assert captured_state["references"] == [b"real-pdf-bytes"]
+        assert captured_state["context"] == "Test context"
+
+    @pytest.mark.asyncio
+    async def test_skips_references_without_pdf_content(self, client):
+        """Test that references with no pdf_content are excluded from state."""
+        ref = _make_ref(pdf_content=None)
+        mock_doc = MagicMock(spec=DocumentModel)
+        mock_doc.id = "507f1f77bcf86cd799439011"
+
+        captured_state = {}
+        mock_graph = MagicMock()
+
+        async def capturing_ainvoke(state):
+            captured_state.update(state)
+            return _make_graph_result()
+
+        mock_graph.ainvoke = capturing_ainvoke
+        mock_build = MagicMock(return_value=mock_graph)
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "langraph.app.graph.build_graph",
+                mock_build,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 1),
+            ),
+        ):
+            MockDocCls.return_value = mock_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Test context",
+                },
+            )
+
+        assert resp.status_code == 200
+        assert captured_state["references"] == []
+
+    @pytest.mark.asyncio
+    async def test_calls_build_pdf_with_graph_result(self, client):
+        """Test that build_pdf is called with title and sections from graph."""
+        ref = _make_ref()
+        mock_doc = MagicMock(spec=DocumentModel)
+        mock_doc.id = "507f1f77bcf86cd799439011"
+        sections = [
+            {
+                "heading": "Custom Section",
+                "content": [{"type": "paragraph", "text": "Custom text."}],
+            },
+        ]
+        graph_result = _make_graph_result(
+            title="Custom Title", sections=sections
+        )
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "langraph.app.graph.build_graph",
+                _mock_build_graph(graph_result),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 1),
+            ) as mock_build_pdf,
+        ):
+            MockDocCls.return_value = mock_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Test context",
+                },
+            )
+
+        assert resp.status_code == 200
+        mock_build_pdf.assert_called_once_with("Custom Title", sections)

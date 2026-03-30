@@ -285,6 +285,132 @@ LEGAL_CONTENT: dict[str, list[str]] = {
         "3. MANAGING COOKIES. You may control cookie preferences through your "
         "browser settings or our consent management tool.",
     ],
+    # --- Reference document templates ---
+    "NDA Template": [
+        "NON-DISCLOSURE AGREEMENT TEMPLATE",
+        "This Non-Disclosure Agreement ('Agreement') is entered into by and "
+        "between the Disclosing Party and the Receiving Party as of the "
+        "Effective Date set forth on the signature page.",
+        "1. DEFINITION OF CONFIDENTIAL INFORMATION. 'Confidential Information' "
+        "means any non-public technical, business, or financial information "
+        "disclosed by the Disclosing Party, whether orally, in writing, or "
+        "by inspection of tangible objects.",
+        "2. OBLIGATIONS OF RECEIVING PARTY. The Receiving Party shall hold and "
+        "maintain the Confidential Information in strict confidence, using "
+        "the same degree of care it uses to protect its own confidential "
+        "information, but in no event less than reasonable care.",
+        "3. EXCLUSIONS. Confidential Information does not include information "
+        "that: (a) is or becomes publicly available through no fault of the "
+        "Receiving Party; (b) was already known to the Receiving Party prior "
+        "to disclosure; (c) is independently developed without use of the "
+        "Confidential Information.",
+        "4. TERM AND TERMINATION. This Agreement shall remain in effect for a "
+        "period of two (2) years from the Effective Date unless terminated "
+        "earlier by either party upon thirty (30) days written notice.",
+        "5. RETURN OF MATERIALS. Upon termination or request, the Receiving "
+        "Party shall promptly return or destroy all materials containing "
+        "Confidential Information and certify such destruction in writing.",
+    ],
+    "Service Agreement": [
+        "GENERAL SERVICE AGREEMENT",
+        "This Service Agreement ('Agreement') is made and entered into by and "
+        "between the Service Provider and the Client as of the Effective Date.",
+        "1. SCOPE OF SERVICES. The Service Provider shall perform the services "
+        "described in the Statement of Work attached as Exhibit A, including "
+        "all deliverables, milestones, and acceptance criteria specified therein.",
+        "2. COMPENSATION. The Client shall pay the Service Provider the fees "
+        "set forth in the applicable Statement of Work. Invoices shall be "
+        "submitted monthly and are due within thirty (30) days of receipt.",
+        "3. TERM. This Agreement commences on the Effective Date and shall "
+        "continue until all services have been completed, unless terminated "
+        "earlier in accordance with the termination provisions herein.",
+        "4. INTELLECTUAL PROPERTY. All work product, inventions, and materials "
+        "created by the Service Provider in the course of performing services "
+        "shall be the exclusive property of the Client upon full payment.",
+        "5. WARRANTIES. The Service Provider warrants that all services shall "
+        "be performed in a professional and workmanlike manner consistent with "
+        "generally accepted industry standards and practices.",
+        "6. LIMITATION OF LIABILITY. Neither party shall be liable for any "
+        "indirect, incidental, or consequential damages arising out of this "
+        "Agreement, regardless of the form of action or theory of liability.",
+    ],
+    "Privacy Policy Template": [
+        "PRIVACY POLICY TEMPLATE",
+        "This Privacy Policy describes how the Organization collects, uses, "
+        "stores, and discloses personal information in compliance with "
+        "applicable data protection laws including GDPR and CCPA.",
+        "1. INFORMATION WE COLLECT. We collect personal information that you "
+        "provide directly, such as name, email address, phone number, and "
+        "payment information, as well as information collected automatically "
+        "through cookies and similar tracking technologies.",
+        "2. HOW WE USE YOUR INFORMATION. We use personal information to "
+        "provide and improve our services, process transactions, communicate "
+        "with you, comply with legal obligations, and protect our rights.",
+        "3. DATA SHARING AND DISCLOSURE. We do not sell personal information. "
+        "We may share information with service providers who assist in our "
+        "operations, subject to confidentiality obligations, or as required "
+        "by law or legal process.",
+        "4. DATA RETENTION. We retain personal information only for as long as "
+        "necessary to fulfill the purposes for which it was collected, or as "
+        "required by applicable law or regulation.",
+        "5. YOUR RIGHTS AND CHOICES. You have the right to access, correct, "
+        "delete, and port your personal data. You may also opt out of certain "
+        "data processing activities by contacting us at the address below.",
+        "6. SECURITY MEASURES. We implement appropriate technical and "
+        "organizational measures to protect personal information against "
+        "unauthorized access, alteration, disclosure, or destruction.",
+    ],
+    "Employment Handbook": [
+        "EMPLOYMENT HANDBOOK TEMPLATE",
+        "This Employment Handbook establishes the policies, procedures, and "
+        "expectations applicable to all employees of the Organization.",
+        "1. EMPLOYMENT RELATIONSHIP. Employment is at-will and may be "
+        "terminated by either party at any time with or without cause. "
+        "Nothing in this handbook creates an express or implied contract "
+        "of employment.",
+        "2. WORKPLACE CONDUCT. All employees are expected to conduct "
+        "themselves professionally, treat colleagues with respect, and "
+        "maintain a harassment-free work environment. Violations may result "
+        "in disciplinary action up to and including termination.",
+        "3. COMPENSATION AND BENEFITS. Salary reviews are conducted annually. "
+        "The company offers a comprehensive benefits package including health "
+        "insurance, retirement plan contributions, paid time off, and "
+        "professional development opportunities.",
+        "4. LEAVE POLICIES. The company provides paid time off, sick leave, "
+        "and parental leave in accordance with applicable law. Leave requests "
+        "must be submitted in advance and approved by the employee's manager.",
+        "5. EQUAL EMPLOYMENT OPPORTUNITY. The Organization is committed to "
+        "providing equal employment opportunities regardless of race, color, "
+        "religion, sex, national origin, age, disability, or any other "
+        "characteristic protected by applicable law.",
+        "6. CONFIDENTIALITY. Employees must protect confidential company "
+        "information and trade secrets during and after employment. All "
+        "company materials must be returned upon termination.",
+    ],
+    "Vendor Agreement": [
+        "VENDOR AGREEMENT TEMPLATE",
+        "This Vendor Agreement ('Agreement') governs the commercial "
+        "relationship between the Company and the Vendor for the supply of "
+        "goods and services as described herein.",
+        "1. SUPPLY OBLIGATIONS. The Vendor shall deliver goods and services "
+        "in accordance with the specifications, quantities, and delivery "
+        "schedule set forth in each Purchase Order issued under this Agreement.",
+        "2. PRICING AND PAYMENT. Prices shall be as set forth in the "
+        "applicable Purchase Order and shall remain firm for the duration "
+        "of the order. Payment terms are net thirty (30) days from invoice.",
+        "3. QUALITY ASSURANCE. All goods shall conform to the specifications "
+        "and quality standards set forth in Exhibit A. The Vendor shall "
+        "maintain a quality management system and permit audits upon request.",
+        "4. WARRANTIES. The Vendor warrants that all goods shall be free from "
+        "defects in materials and workmanship for a period of twelve (12) "
+        "months from the date of delivery.",
+        "5. INDEMNIFICATION. The Vendor shall indemnify and hold harmless the "
+        "Company from any claims, damages, or expenses arising from the "
+        "Vendor's breach of this Agreement or negligent acts.",
+        "6. DISPUTE RESOLUTION. Any disputes arising under this Agreement "
+        "shall be resolved through good faith negotiation, followed by "
+        "mediation, and if necessary, binding arbitration.",
+    ],
 }
 
 
@@ -518,6 +644,12 @@ for _doc in SAMPLE_DOCUMENTS:
     _content = LEGAL_CONTENT.get(_doc["title"])
     if _content:
         _doc["pdf_content"] = generate_pdf(_doc["title"], _content)
+
+# Attach generated PDF content to each seed reference.
+for _ref in SAMPLE_REFERENCES:
+    _content = LEGAL_CONTENT.get(_ref["title"])
+    if _content:
+        _ref["pdf_content"] = generate_pdf(_ref["title"], _content)
 
 
 async def seed():

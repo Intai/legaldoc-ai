@@ -151,6 +151,7 @@ Feature: New Document Page
   # Step 3 - Generation phase progression
   # ──────────────────────────────────────────────
 
+  @timeout-600s
   Scenario: NDP-10 - Generation progresses through phases via SSE
     When I navigate to the new document page at "/documents/new"
     And I select the "NDA Template" reference

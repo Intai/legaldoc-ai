@@ -24,6 +24,7 @@ reseed: db-seed ## Alias for db-seed
 
 install: ## Install dependencies (svc=api|web, default: both)
 ifneq ($(filter api,$(_svc)),)
+	cd langraph && pip install -e ".[dev]"
 	cd api && pip install -e ".[dev]"
 endif
 ifneq ($(filter web,$(_svc)),)
@@ -33,6 +34,7 @@ endif
 lint: ## Run linters (svc=api|web, default: both)
 ifneq ($(filter api,$(_svc)),)
 	cd api && ruff check .
+	cd langraph && ruff check .
 endif
 ifneq ($(filter web,$(_svc)),)
 	cd web && npm run lint
@@ -41,6 +43,7 @@ endif
 test: ## Run tests (svc=api|web, default: both)
 ifneq ($(filter api,$(_svc)),)
 	cd api && pytest tests/
+	cd langraph && pytest tests/
 endif
 ifneq ($(filter web,$(_svc)),)
 	cd web && npm test
@@ -49,10 +52,11 @@ endif
 coverage: ## Run tests with coverage (svc=api|web, default: both)
 ifneq ($(filter api,$(_svc)),)
 	cd api && pytest --cov --cov-report=term-missing tests/
+	cd langraph && pytest --cov --cov-report=term-missing tests/
 endif
 ifneq ($(filter web,$(_svc)),)
 	cd web && npm run test:coverage
 endif
 
 regression: ## Run e2e tests
-	cd web && npm run test:e2e
+	cd web && npm run test:e2e -- --grep-invert "@timeout-"

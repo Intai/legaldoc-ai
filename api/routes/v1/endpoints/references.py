@@ -128,6 +128,7 @@ async def create_reference(file: UploadFile) -> ReferenceCreateResponse:
         title=title,
         type=DocumentType.CONTRACT,
         description=description,
+        pdf_content=content,
     )
     await ref.insert()
 

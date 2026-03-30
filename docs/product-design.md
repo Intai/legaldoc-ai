@@ -221,7 +221,7 @@ The user provides the specific context that makes this document unique.
 
 The generated document streams in and is presented for review, saving, and export.
 
-- A progress indicator at the top shows which phase of generation is active (e.g., "Analyzing references...", "Structuring document...", "Drafting sections...", "Finalizing..."). These phase labels correspond to LangGraph nodes in the backend workflow.
+- A progress indicator at the top shows which phase of generation is active (e.g., "Analyzing references", "Structuring document", "Drafting sections...", "Finalizing..."). These phase labels correspond to LangGraph nodes in the backend workflow.
 - The document content streams into the view section by section, using server-sent events. Users can begin reading while generation continues.
 - The user can cancel generation at any time. Partially generated content is preserved.
 - Once complete, the document is displayed in a clean, read-only document viewer.
@@ -258,7 +258,7 @@ The generated document streams in and is presented for review, saving, and expor
 
 **Decision**: Stream the generated document to the user in real time, organized by visible phases that correspond to the LangGraph workflow stages.
 
-**Rationale**: Streaming addresses perceived latency -- research shows users perceive streaming responses as 40-60% faster than equivalent non-streaming responses. The phased progress indicators ("Analyzing references...", "Structuring document...", "Drafting sections...") provide meaningful context about what the system is doing, which builds trust.
+**Rationale**: Streaming addresses perceived latency -- research shows users perceive streaming responses as 40-60% faster than equivalent non-streaming responses. The phased progress indicators ("Analyzing references", "Structuring document", "Drafting sections...") provide meaningful context about what the system is doing, which builds trust.
 
 **Technical alignment**: The backend uses LangGraph for workflow orchestration, which naturally decomposes into nodes/phases. FastAPI supports server-sent events for streaming. RxJS on the frontend is well-suited to handling streaming data and updating the UI reactively.
 

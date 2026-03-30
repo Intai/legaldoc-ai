@@ -169,6 +169,23 @@ describe('new-document-store', () => {
     expect(useNewDocumentStore.getState().currentStep).toBe(2)
   })
 
+  it('should reset generatedDocumentId when re-generating a document', () => {
+    const subject = new Subject()
+    fetchSSE.mockReturnValue(subject)
+    useNewDocumentStore.setState({
+      selectedReferenceIds: new Set(['ref-1']),
+      context: 'My context',
+      generatedDocumentId: 'old-doc-456',
+    })
+
+    useNewDocumentStore.getState().generateDocument()
+
+    expect(useNewDocumentStore.getState().generatedDocumentId).toBeNull()
+    expect(useNewDocumentStore.getState().generationPhase).toBe(PHASE_ANALYZING)
+
+    subject.complete()
+  })
+
   it('should generate a document and update phase from SSE events', () => {
     const subject = new Subject()
     fetchSSE.mockReturnValue(subject)

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "legaldoc-ai-langraph"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "langgraph",
+    "langchain-core",
+    "langchain-anthropic",
+    "langchain-openai",
+    "langsmith",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "langgraph-cli[inmem]",
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.format]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["langraph"]
+omit = [
+  "*/__init__.py",
+  "tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
