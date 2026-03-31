@@ -48,6 +48,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 - [Home page layout design](https://github.com/Intai/legaldoc-ai/blob/main/docs/documents-layout.md)
 - [Document page layout design](https://github.com/Intai/legaldoc-ai/blob/main/docs/document-detail-layout.md)
 - [Generate document layout design](https://github.com/Intai/legaldoc-ai/blob/main/docs/new-document-layout.md)
+- [Home page UI/UX design](https://htmlpreview.github.io/?https://github.com/Intai/legaldoc-ai/blob/main/docs/documents-ui-design.html)
 - [Home page story](https://github.com/Intai/legaldoc-ai/blob/main/docs/documents-story.md)
 - [Document page story](https://github.com/Intai/legaldoc-ai/blob/main/docs/document-detail-story.md)
 - [Generate document story](https://github.com/Intai/legaldoc-ai/blob/main/docs/new-document-story.md)
