@@ -34,7 +34,7 @@ jobs:
 
       - name: Update API badge
         if: github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@v1.7.0
+        uses: schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: a55e01d59a2568227c0e8e4c3ba243f9
@@ -47,7 +47,7 @@ jobs:
 
       - name: Update LangGraph badge
         if: github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@v1.7.0
+        uses: schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: a55e01d59a2568227c0e8e4c3ba243f9
@@ -60,7 +60,7 @@ jobs:
 
       - name: Update Web badge
         if: github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@v1.7.0
+        uses: schneegans/dynamic-badges-action@v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: a55e01d59a2568227c0e8e4c3ba243f9
