@@ -40,7 +40,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
    - `make test` to run unit tests.
    - `make coverage` to calculate unit test coverage.
    - `make regression` to run BDD scenarios headlessly.
-7. Install https://github.com/Intai/story-flow for agentic development workflow.
+7. Install [story-flow](https://github.com/Intai/story-flow) for agentic development workflow.
 
 ## Overview
 
