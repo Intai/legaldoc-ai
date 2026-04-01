@@ -6,7 +6,7 @@ import { execSync } from 'child_process';
 // ============================================================
 
 test.describe('Feature: Documents Page', () => {
-  test('DP-01: Display page title and document cards', async ({ page }) => {
+  test('DP-01: Display page title and document cards @purge-data', async ({ page }) => {
     // @purge-data - Restore the seed data to initial state
     execSync('make reseed', { stdio: 'inherit', cwd: '..' });
 
@@ -20,11 +20,9 @@ test.describe('Feature: Documents Page', () => {
     await expect(page.getByTestId('topbar').getByTestId('user-avatar')).toBeVisible();
 
     // And the sidebar should show "Documents" as the active navigation item
-    const docsLink = page.getByTestId('sidebar-nav').getByRole('link', { name: 'Documents' });
-    const isActive = await docsLink.evaluate(
-      (el) => el.className.includes('font-semibold')
-    );
-    expect(isActive).toBe(true);
+    await expect(
+      page.getByTestId('sidebar').getByTestId('sidebar-nav').getByRole('link', { name: 'Documents' })
+    ).toHaveAttribute('class', /bg-primary-100/);
 
     // And the sidebar should show "New Document" as a navigation item
     await expect(
@@ -38,58 +36,38 @@ test.describe('Feature: Documents Page', () => {
     await expect(page.getByTestId('card-grid')).toBeVisible();
 
     // And each card should display a title
-    await expect(page.getByTestId('card-grid').locator('[data-testid^="document-card-"]')).toHaveCount(6);
+    await expect(page.getByTestId('card-grid').getByRole('link')).toHaveCount(6);
 
     // And each card should display a status badge
     await expect(page.getByTestId('card-grid').locator('[data-testid^="status-badge-"]')).toHaveCount(6);
 
     // And each card should display a maximum 2-line description snippet
-    const descriptionClamp = await page
-      .getByTestId('card-grid')
-      .locator('[data-testid^="document-card-"] p')
-      .first()
-      .evaluate((el) => window.getComputedStyle(el).webkitLineClamp === '2');
-    expect(descriptionClamp).toBe(true);
+    await expect(page.getByTestId('card-grid').locator('p.line-clamp-2')).toHaveCount(6);
 
     // And each card should display a type badge
     await expect(page.getByTestId('card-grid').locator('[data-testid^="type-badge-"]')).toHaveCount(6);
 
     // And each card should display a date
-    await expect(
-      page.getByTestId('card-grid').locator('[data-testid^="document-card-"]').first()
-    ).toContainText('2026');
+    const firstCardText = await page.getByTestId('card-grid').getByRole('link').first().textContent();
+    expect(firstCardText).toMatch(/\w{3} \d{1,2}, \d{4}/);
 
     // And each card should display a page count
-    await expect(
-      page.getByTestId('card-grid').locator('[data-testid^="document-card-"]').first()
-    ).toContainText('pages');
+    expect(firstCardText).toMatch(/\d+ pages/);
 
     // And cards with "Done" status should display a success badge
-    const doneHasSuccess = await page
-      .getByTestId('card-grid')
-      .locator('[data-testid^="status-badge-"]')
-      .filter({ hasText: 'Done' })
-      .first()
-      .evaluate((el) => el.className.includes('bg-success'));
-    expect(doneHasSuccess).toBe(true);
+    await expect(
+      page.getByTestId('card-grid').locator('[data-testid^="status-badge-"]', { hasText: 'Done' }).first()
+    ).toHaveAttribute('class', /bg-success/);
 
     // And cards with "Draft" status should display a warning badge
-    const draftHasWarning = await page
-      .getByTestId('card-grid')
-      .locator('[data-testid^="status-badge-"]')
-      .filter({ hasText: 'Draft' })
-      .first()
-      .evaluate((el) => el.className.includes('bg-warning'));
-    expect(draftHasWarning).toBe(true);
+    await expect(
+      page.getByTestId('card-grid').locator('[data-testid^="status-badge-"]', { hasText: 'Draft' }).first()
+    ).toHaveAttribute('class', /bg-warning/);
 
     // And cards with "Generating" status should display a primary badge
-    const generatingHasPrimary = await page
-      .getByTestId('card-grid')
-      .locator('[data-testid^="status-badge-"]')
-      .filter({ hasText: 'Generating' })
-      .first()
-      .evaluate((el) => el.className.includes('bg-primary'));
-    expect(generatingHasPrimary).toBe(true);
+    await expect(
+      page.getByTestId('card-grid').locator('[data-testid^="status-badge-"]', { hasText: 'Generating' }).first()
+    ).toHaveAttribute('class', /bg-primary/);
   });
 
   test('DP-02: Default sort is most recent', async ({ page }) => {
