@@ -40,7 +40,7 @@ const mockDocument = {
   status: 'Done',
   type: 'NDA',
   description: 'This Non-Disclosure Agreement is entered into between the parties.',
-  createdAt: '2026-03-25T10:00:00Z',
+  createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   pageCount: 3,
 }
 
@@ -71,7 +71,7 @@ describe('DocumentCard', () => {
     mockFormat.mockReturnValue('Mar 1, 2026')
     mockFDTN.mockReturnValue('30 days ago')
 
-    const oldDoc = { ...mockDocument, createdAt: '2026-03-01T10:00:00Z' }
+    const oldDoc = { ...mockDocument, createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() }
     render(<DocumentCard document={oldDoc} />)
 
     expect(mockFormat).toHaveBeenCalled()
