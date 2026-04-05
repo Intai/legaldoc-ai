@@ -89,10 +89,34 @@ class TestFinalizeNodePhaseCallback:
         state = {
             "draft": "Draft content here.",
             "title": "Test Document",
+            "doc_type": "contract",
             "phase_callback": queue,
         }
         await finalize_module.finalize_node(state)
         assert queue.get_nowait() == "finalizing"
+
+    async def test_emits_ready_tuple_after_finalizing(
+        self, finalize_module, mock_result
+    ):
+        queue = asyncio.Queue()
+        state = {
+            "draft": "Draft content here.",
+            "title": "Test Document",
+            "doc_type": "contract",
+            "phase_callback": queue,
+        }
+        await finalize_module.finalize_node(state)
+        # First item is "finalizing"
+        queue.get_nowait()
+        # Second item is the "ready" tuple
+        phase, payload = queue.get_nowait()
+        assert phase == "ready"
+        assert payload == {
+            "title": "Test Document",
+            "sections": mock_result.sections,
+            "doc_type": "contract",
+            "description": "A brief summary.",
+        }
 
     async def test_no_error_without_phase_callback(self, finalize_module):
         state = {

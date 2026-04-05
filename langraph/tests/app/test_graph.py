@@ -62,6 +62,7 @@ def _import_graph_module():
     mock_structure = MagicMock(name="structure_node")
     mock_draft = MagicMock(name="draft_node")
     mock_finalize = MagicMock(name="finalize_node")
+    mock_ingest = MagicMock(name="ingest_node")
 
     fake_analyze_mod = ModuleType("langraph.nodes.analyze_node")
     fake_analyze_mod.analyze_node = mock_analyze
@@ -71,6 +72,8 @@ def _import_graph_module():
     fake_draft_mod.draft_node = mock_draft
     fake_finalize_mod = ModuleType("langraph.nodes.finalize_node")
     fake_finalize_mod.finalize_node = mock_finalize
+    fake_ingest_mod = ModuleType("langraph.nodes.ingest_node")
+    fake_ingest_mod.ingest_node = mock_ingest
 
     fake_state_mod = ModuleType("langraph.app.state")
     fake_state_mod.GenerateDocumentState = MagicMock()
@@ -86,6 +89,7 @@ def _import_graph_module():
         "langraph.nodes.structure_node": fake_structure_mod,
         "langraph.nodes.draft_node": fake_draft_mod,
         "langraph.nodes.finalize_node": fake_finalize_mod,
+        "langraph.nodes.ingest_node": fake_ingest_mod,
     }
 
     with patch.dict(sys.modules, modules_patch):
@@ -97,6 +101,7 @@ def _import_graph_module():
         "structure": mock_structure,
         "draft": mock_draft,
         "finalize": mock_finalize,
+        "ingest": mock_ingest,
     }
 
 
@@ -127,9 +132,14 @@ class TestBuildGraphNodes:
         assert "finalize" in graph.nodes
         assert graph.nodes["finalize"] is mocks["finalize"]
 
-    def test_has_exactly_four_nodes(self):
+    def test_has_ingest_node(self):
+        graph, _, mocks = _import_graph_module()
+        assert "ingest" in graph.nodes
+        assert graph.nodes["ingest"] is mocks["ingest"]
+
+    def test_has_exactly_five_nodes(self):
         graph, _, _ = _import_graph_module()
-        assert len(graph.nodes) == 4
+        assert len(graph.nodes) == 5
 
 
 class TestBuildGraphEdges:
@@ -149,10 +159,14 @@ class TestBuildGraphEdges:
         graph, _, _ = _import_graph_module()
         assert ("draft", "finalize") in graph.graph.edges
 
-    def test_has_finalize_to_end_edge(self):
-        graph, fakes, _ = _import_graph_module()
-        assert ("finalize", fakes["_END"]) in graph.graph.edges
-
-    def test_has_exactly_five_edges(self):
+    def test_has_finalize_to_ingest_edge(self):
         graph, _, _ = _import_graph_module()
-        assert len(graph.graph.edges) == 5
+        assert ("finalize", "ingest") in graph.graph.edges
+
+    def test_has_ingest_to_end_edge(self):
+        graph, fakes, _ = _import_graph_module()
+        assert ("ingest", fakes["_END"]) in graph.graph.edges
+
+    def test_has_exactly_six_edges(self):
+        graph, _, _ = _import_graph_module()
+        assert len(graph.graph.edges) == 6

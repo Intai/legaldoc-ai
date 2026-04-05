@@ -4,11 +4,13 @@ import asyncio
 import base64
 import io
 import json
+import logging
 from datetime import datetime
 from enum import StrEnum
 from urllib.parse import quote
 
 from beanie import PydanticObjectId
+from bson import ObjectId
 from fastapi import APIRouter, Query
 from fastapi.responses import Response
 from pymongo import ReturnDocument
@@ -407,10 +409,14 @@ async def _generate_events(request: GenerateDocumentRequest):
 
     Looks up references, runs the compiled graph as a background task,
     streams progress phase events from an asyncio.Queue, builds the PDF
-    from the graph result, creates a DocumentModel, and yields the final
-    complete event.
+    when the finalize node signals "ready", creates a DocumentModel with
+    a pre-generated ID, and yields the final complete event. The graph
+    task continues independently so the ingest node can run in the
+    background after the SSE connection closes.
     """
     from langraph.app.graph import build_graph
+
+    logger = logging.getLogger(__name__)
 
     try:
         # Look up references
@@ -431,6 +437,9 @@ async def _generate_events(request: GenerateDocumentRequest):
             }
             return
 
+        # Pre-generate document ID so it can be shared with the graph
+        document_id = ObjectId()
+
         # Build initial state with phase callback queue
         queue: asyncio.Queue = asyncio.Queue()
         state = {
@@ -438,6 +447,7 @@ async def _generate_events(request: GenerateDocumentRequest):
                 ref.pdf_content for ref in references if ref.pdf_content
             ],
             "context": request.context,
+            "document_id": str(document_id),
             "phase_callback": queue,
         }
 
@@ -446,44 +456,45 @@ async def _generate_events(request: GenerateDocumentRequest):
 
         async def run_graph():
             try:
-                result = await graph.ainvoke(state)
-                await queue.put(("complete", result))
+                await graph.ainvoke(state)
             except Exception as exc:
+                logger.exception("Graph execution failed")
                 await queue.put(("error", exc))
 
-        task = asyncio.create_task(run_graph())
+        asyncio.create_task(run_graph())
 
         # Yield SSE events from queue
         while True:
             event = await queue.get()
-            if isinstance(event, tuple) and event[0] == "complete":
-                result = event[1]
-                # Build PDF from graph result
+            if isinstance(event, tuple) and event[0] == "ready":
+                payload = event[1]
+                # Build PDF from finalize node payload
                 pdf_bytes, page_count = build_pdf(
-                    result["title"], result["sections"]
+                    payload["title"], payload["sections"]
                 )
-                # Create document
+                # Create document with pre-generated ID
                 doc = DocumentModel(
-                    title=result["title"],
-                    type=result["doc_type"],
+                    id=document_id,
+                    title=payload["title"],
+                    type=payload["doc_type"],
                     status=DocumentStatus.DRAFT,
-                    description=result.get("description", request.context[:200]),
+                    description=payload.get(
+                        "description", request.context[:200]
+                    ),
                     page_count=page_count,
                     pdf_content=pdf_bytes,
                 )
                 await doc.insert()
                 yield {
                     "event": "complete",
-                    "data": json.dumps({"documentId": str(doc.id)}),
+                    "data": json.dumps({"documentId": str(document_id)}),
                 }
-                break
+                return
             elif isinstance(event, tuple) and event[0] == "error":
                 raise event[1]
             else:
                 # Phase event from a node
                 yield {"event": "phase", "data": json.dumps({"phase": event})}
-
-        await task  # ensure no exceptions are lost
 
     except Exception as exc:
         yield {

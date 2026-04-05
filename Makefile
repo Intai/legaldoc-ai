@@ -55,7 +55,7 @@ ifneq ($(filter api,$(_svc)),)
 	cd langraph && pytest --cov --cov-report=term-missing --cov-report=json tests/
 endif
 ifneq ($(filter web,$(_svc)),)
-	cd web && npm run test:coverage -- --coverageReporters=json-summary
+	cd web && npm run test:coverage -- --coverageReporters=text --coverageReporters=json-summary
 endif
 
 regression: ## Run e2e tests (include=all to include long scenarios)

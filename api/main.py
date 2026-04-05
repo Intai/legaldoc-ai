@@ -12,6 +12,10 @@ from api.routes.v1.router import router as v1_router
 async def lifespan(app: FastAPI):
     """Manage application startup and shutdown lifecycle."""
     await init_db()
+
+    from langraph.services import vector_store
+
+    vector_store.init_collection()
     yield
 
 

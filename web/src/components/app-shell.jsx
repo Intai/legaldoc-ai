@@ -1,9 +1,8 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, matchPath, useLocation } from 'react-router-dom'
-import { FileText, Plus, Search } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/shadcn/ui/avatar'
-import { Input } from '@/shadcn/ui/input'
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +17,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/shadcn/ui/sidebar'
+import { AssistantInput } from './assistant-input'
 
 const NAV_ITEMS = [
   { to: '/', icon: FileText, labelKey: 'nav.documents', matchPaths: ['/', '/documents/:id'], excludePaths: ['/documents/new'] },
@@ -87,15 +87,7 @@ function AppShell({ children }) {
           <SidebarTrigger className="lg:hidden [&_svg]:size-5!" data-testid="sidebar-trigger" />
 
           <div className="flex-1">
-            <div className="relative max-w-[280px] max-md:max-w-none max-md:w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-400" />
-              <Input
-                type="text"
-                placeholder={t('search.placeholder')}
-                className="pl-10"
-                data-testid="search-input"
-              />
-            </div>
+            <AssistantInput />
           </div>
 
           <Avatar data-testid="user-avatar">

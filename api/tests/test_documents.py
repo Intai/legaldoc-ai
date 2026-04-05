@@ -816,10 +816,10 @@ def _make_graph_result(
 
 
 def _mock_build_graph(result, phases=None):
-    """Create a mock build_graph that emits phases and returns result.
+    """Create a mock build_graph that emits phases and a ready tuple.
 
     The mock graph's ainvoke puts phase strings into the queue from state,
-    then puts the ("complete", result) sentinel.
+    then puts the ("ready", payload) tuple as the finalize node would.
     """
     if phases is None:
         phases = ["analyzing", "structuring", "drafting", "finalizing"]
@@ -830,6 +830,15 @@ def _mock_build_graph(result, phases=None):
         queue = state["phase_callback"]
         for phase in phases:
             await queue.put(phase)
+        await queue.put((
+            "ready",
+            {
+                "title": result["title"],
+                "sections": result["sections"],
+                "doc_type": result["doc_type"],
+                "description": result.get("description", ""),
+            },
+        ))
         return result
 
     mock_graph.ainvoke = mock_ainvoke
@@ -966,17 +975,31 @@ class TestGenerateDocument:
         created_doc.id = "507f1f77bcf86cd799439011"
         long_context = "B" * 300
 
-        # Graph result without description key
-        graph_result = {
-            "title": "Title",
-            "doc_type": "NDA",
-            "sections": [
+        # Ready payload without description key
+        sections = [
+            {
+                "heading": "S1",
+                "content": [{"type": "paragraph", "text": "Text."}],
+            },
+        ]
+
+        mock_graph = MagicMock()
+
+        async def mock_ainvoke(state):
+            queue = state["phase_callback"]
+            await queue.put("analyzing")
+            await queue.put((
+                "ready",
                 {
-                    "heading": "S1",
-                    "content": [{"type": "paragraph", "text": "Text."}],
+                    "title": "Title",
+                    "sections": sections,
+                    "doc_type": "NDA",
                 },
-            ],
-        }
+            ))
+            return {}
+
+        mock_graph.ainvoke = mock_ainvoke
+        mock_build = MagicMock(return_value=mock_graph)
 
         with (
             patch.object(
@@ -990,7 +1013,7 @@ class TestGenerateDocument:
             ) as MockDocCls,
             patch(
                 "langraph.app.graph.build_graph",
-                _mock_build_graph(graph_result),
+                mock_build,
             ),
             patch(
                 "api.routes.v1.endpoints.documents.build_pdf",
@@ -1066,16 +1089,13 @@ class TestGenerateDocument:
         assert error_data["code"] == "INTERNAL_ERROR"
 
     @pytest.mark.asyncio
-    async def test_returns_error_on_graph_exception(self, client):
-        """Test that a graph execution error emits an error event."""
+    async def test_returns_error_when_graph_raises_exception(self, client):
+        """Test that a graph exception emits an SSE error event."""
         ref = _make_ref()
-
         mock_graph = MagicMock()
 
         async def failing_ainvoke(state):
-            queue = state["phase_callback"]
-            await queue.put("analyzing")
-            raise RuntimeError("LLM failure")
+            raise RuntimeError("graph exploded")
 
         mock_graph.ainvoke = failing_ainvoke
         mock_build = MagicMock(return_value=mock_graph)
@@ -1102,20 +1122,92 @@ class TestGenerateDocument:
 
         assert resp.status_code == 200
         events = _parse_sse_events(resp.text)
-        # Should have at least the analyzing phase before the error
-        phase_events = [e for e in events if e.get("event") == "phase"]
-        assert len(phase_events) >= 1
         error_events = [e for e in events if e.get("event") == "error"]
         assert len(error_events) == 1
         error_data = json.loads(error_events[0]["data"])
         assert error_data["code"] == "INTERNAL_ERROR"
+        assert "graph exploded" in error_data["message"]
 
     @pytest.mark.asyncio
-    async def test_passes_pdf_content_to_graph_state(self, client):
-        """Test that reference pdf_content bytes are passed to graph state."""
+    async def test_logs_error_on_graph_exception_after_ready(self, client):
+        """Test that a post-ready graph error is logged, not sent to the queue."""
+        ref = _make_ref()
+        mock_doc = MagicMock(spec=DocumentModel)
+        mock_doc.id = "507f1f77bcf86cd799439011"
+        graph_result = _make_graph_result()
+
+        mock_graph = MagicMock()
+
+        async def failing_after_ready(state):
+            queue = state["phase_callback"]
+            await queue.put("analyzing")
+            await queue.put((
+                "ready",
+                {
+                    "title": graph_result["title"],
+                    "sections": graph_result["sections"],
+                    "doc_type": graph_result["doc_type"],
+                    "description": graph_result["description"],
+                },
+            ))
+            raise RuntimeError("Ingest failure")
+
+        mock_graph.ainvoke = failing_after_ready
+        mock_build = MagicMock(return_value=mock_graph)
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "langraph.app.graph.build_graph",
+                mock_build,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 1),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.logging",
+            ) as mock_logging,
+        ):
+            MockDocCls.return_value = mock_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
+            mock_logger = MagicMock()
+            mock_logging.getLogger.return_value = mock_logger
+
+            resp = await client.post(
+                "/api/v1/documents/generate",
+                json={
+                    "referenceIds": ["607f1f77bcf86cd799439011"],
+                    "context": "Some context",
+                },
+            )
+
+        assert resp.status_code == 200
+        events = _parse_sse_events(resp.text)
+        # Should have analyzing phase and complete event (no error event)
+        phase_events = [e for e in events if e.get("event") == "phase"]
+        assert len(phase_events) >= 1
+        complete_events = [e for e in events if e.get("event") == "complete"]
+        assert len(complete_events) == 1
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) == 0
+        mock_logger.exception.assert_called_once_with("Graph execution failed")
+
+    @pytest.mark.asyncio
+    async def test_passes_pdf_content_and_document_id_to_graph_state(self, client):
+        """Test that reference pdf_content and document_id are passed to graph state."""
         ref = _make_ref(pdf_content=b"real-pdf-bytes")
         mock_doc = MagicMock(spec=DocumentModel)
         mock_doc.id = "507f1f77bcf86cd799439011"
+        graph_result = _make_graph_result()
 
         captured_state = {}
         mock_graph = MagicMock()
@@ -1124,7 +1216,16 @@ class TestGenerateDocument:
             captured_state.update(state)
             queue = state["phase_callback"]
             await queue.put("analyzing")
-            return _make_graph_result()
+            await queue.put((
+                "ready",
+                {
+                    "title": graph_result["title"],
+                    "sections": graph_result["sections"],
+                    "doc_type": graph_result["doc_type"],
+                    "description": graph_result["description"],
+                },
+            ))
+            return graph_result
 
         mock_graph.ainvoke = capturing_ainvoke
         mock_build = MagicMock(return_value=mock_graph)
@@ -1162,6 +1263,7 @@ class TestGenerateDocument:
         assert resp.status_code == 200
         assert captured_state["references"] == [b"real-pdf-bytes"]
         assert captured_state["context"] == "Test context"
+        assert "document_id" in captured_state
 
     @pytest.mark.asyncio
     async def test_skips_references_without_pdf_content(self, client):
@@ -1169,13 +1271,24 @@ class TestGenerateDocument:
         ref = _make_ref(pdf_content=None)
         mock_doc = MagicMock(spec=DocumentModel)
         mock_doc.id = "507f1f77bcf86cd799439011"
+        graph_result = _make_graph_result()
 
         captured_state = {}
         mock_graph = MagicMock()
 
         async def capturing_ainvoke(state):
             captured_state.update(state)
-            return _make_graph_result()
+            queue = state["phase_callback"]
+            await queue.put((
+                "ready",
+                {
+                    "title": graph_result["title"],
+                    "sections": graph_result["sections"],
+                    "doc_type": graph_result["doc_type"],
+                    "description": graph_result["description"],
+                },
+            ))
+            return graph_result
 
         mock_graph.ainvoke = capturing_ainvoke
         mock_build = MagicMock(return_value=mock_graph)

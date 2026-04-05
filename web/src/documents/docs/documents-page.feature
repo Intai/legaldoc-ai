@@ -10,7 +10,7 @@ Feature: Documents Page
   @purge-data
   Scenario: DP-01 - Display page title and document cards
     Given I am on the documents page
-    Then the topbar should display a search input
+    Then the topbar should display an assistant input
     And the topbar should display a user avatar
     And the sidebar should show "Documents" as the active navigation item
     And the sidebar should show "New Document" as a navigation item

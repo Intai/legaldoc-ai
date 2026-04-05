@@ -1,17 +1,22 @@
 """Tests for the database seed script."""
 
-from unittest.mock import AsyncMock, patch
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from api.db.seed import (
+sys.modules["langraph"] = MagicMock()
+sys.modules["langraph.services"] = MagicMock()
+sys.modules["langraph.services.vector_store"] = MagicMock()
+
+from api.db.seed import (  # noqa: E402
     LEGAL_CONTENT,
     SAMPLE_DOCUMENTS,
     SAMPLE_REFERENCES,
     generate_pdf,
     seed,
 )
-from api.models.document import DocumentStatus, DocumentType
+from api.models.document import DocumentStatus, DocumentType  # noqa: E402
 
 
 class TestSampleDocuments:
@@ -142,12 +147,18 @@ class TestSeedFunction:
     """Validate the seed function orchestration."""
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.vector_store")
     @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
     @patch("api.db.seed.init_beanie", new_callable=AsyncMock)
     @patch("api.db.seed.AsyncIOMotorClient")
     async def test_seed_deletes_then_inserts_documents(
-        self, mock_client, mock_init_beanie, mock_doc_model, mock_ref_model
+        self,
+        mock_client,
+        mock_init_beanie,
+        mock_doc_model,
+        mock_ref_model,
+        mock_vector_store,
     ):
         """Seed should delete existing documents and insert sample ones."""
         mock_doc_delete = AsyncMock()
@@ -171,12 +182,18 @@ class TestSeedFunction:
         assert len(inserted_docs) == len(SAMPLE_DOCUMENTS)
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.vector_store")
     @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
     @patch("api.db.seed.init_beanie", new_callable=AsyncMock)
     @patch("api.db.seed.AsyncIOMotorClient")
     async def test_seed_deletes_then_inserts_references(
-        self, mock_client, mock_init_beanie, mock_doc_model, mock_ref_model
+        self,
+        mock_client,
+        mock_init_beanie,
+        mock_doc_model,
+        mock_ref_model,
+        mock_vector_store,
     ):
         """Seed should delete existing references and insert sample ones."""
         mock_doc_delete = AsyncMock()
@@ -200,12 +217,18 @@ class TestSeedFunction:
         assert len(inserted_refs) == len(SAMPLE_REFERENCES)
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.vector_store")
     @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
     @patch("api.db.seed.init_beanie", new_callable=AsyncMock)
     @patch("api.db.seed.AsyncIOMotorClient")
     async def test_seed_initialises_beanie_with_both_models(
-        self, mock_client, mock_init_beanie, mock_doc_model, mock_ref_model
+        self,
+        mock_client,
+        mock_init_beanie,
+        mock_doc_model,
+        mock_ref_model,
+        mock_vector_store,
     ):
         """Seed should initialise Beanie with DocumentModel and ReferenceModel."""
         mock_doc_delete = AsyncMock()
@@ -223,3 +246,34 @@ class TestSeedFunction:
         await seed()
 
         mock_init_beanie.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch("api.db.seed.vector_store")
+    @patch("api.db.seed.ReferenceModel")
+    @patch("api.db.seed.DocumentModel")
+    @patch("api.db.seed.init_beanie", new_callable=AsyncMock)
+    @patch("api.db.seed.AsyncIOMotorClient")
+    async def test_seed_clears_vector_store(
+        self,
+        mock_client,
+        mock_init_beanie,
+        mock_doc_model,
+        mock_ref_model,
+        mock_vector_store,
+    ):
+        """Seed should clear the Qdrant vector store collection."""
+        mock_doc_delete = AsyncMock()
+        mock_doc_find_all = AsyncMock()
+        mock_doc_find_all.delete = mock_doc_delete
+        mock_doc_model.find_all.return_value = mock_doc_find_all
+        mock_doc_model.insert_many = AsyncMock()
+
+        mock_ref_delete = AsyncMock()
+        mock_ref_find_all = AsyncMock()
+        mock_ref_find_all.delete = mock_ref_delete
+        mock_ref_model.find_all.return_value = mock_ref_find_all
+        mock_ref_model.insert_many = AsyncMock()
+
+        await seed()
+
+        mock_vector_store.clear_collection.assert_called_once()

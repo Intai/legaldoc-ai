@@ -29,4 +29,18 @@ async def finalize_node(state: dict) -> dict:
     structured_llm = finalize_llm.with_structured_output(FinalizeResult)
     result = await structured_llm.ainvoke([message])
 
-    return {"sections": result.sections, "description": result.description}
+    sections = result.sections
+    if phase_callback:
+        await phase_callback.put(
+            (
+                "ready",
+                {
+                    "title": state["title"],
+                    "sections": sections,
+                    "doc_type": state["doc_type"],
+                    "description": result.description,
+                },
+            )
+        )
+
+    return {"sections": sections, "description": result.description}

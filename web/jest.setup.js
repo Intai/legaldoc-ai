@@ -13,6 +13,16 @@ globalThis.ResizeObserver = class {
   disconnect() {}
 }
 
+const originalError = console.error
+console.error = jest.fn((...args) => {
+  const message = typeof args[0] === 'string' ? args[0] : String(args[0] || '')
+
+  if (message.includes('[ERROR]') || message.includes('Not implemented: navigation')) {
+    return // Suppress error logs
+  }
+  originalError(...args)
+})
+
 const originalInfo = console.info
 console.info = jest.fn((...args) => {
   const message = typeof args[0] === 'string' ? args[0] : String(args[0] || '')

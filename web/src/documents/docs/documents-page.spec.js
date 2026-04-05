@@ -13,8 +13,8 @@ test.describe('Feature: Documents Page', () => {
     // Given I am on the documents page
     await page.goto('http://localhost:8080/');
 
-    // Then the topbar should display a search input
-    await expect(page.getByTestId('topbar').getByTestId('search-input')).toBeVisible();
+    // Then the topbar should display an assistant input
+    await expect(page.getByTestId('topbar').getByTestId('assistant-input')).toBeVisible();
 
     // And the topbar should display a user avatar
     await expect(page.getByTestId('topbar').getByTestId('user-avatar')).toBeVisible();

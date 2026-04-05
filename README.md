@@ -60,20 +60,20 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 - [Tech stack](https://github.com/Intai/legaldoc-ai/blob/main/CLAUDE.md)
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                       Docker Compose                     │
-│                                                          │
-│  ┌────────────┐      ┌───────────────┐      ┌─────────┐  │
-│  │ Web (Vite) │      │ API (FastAPI) │      │ MongoDB │  │
-│  │ :8080      │─────▶│ :8000         │─────▶│ :27017  │  │
-│  └────────────┘      └───────┬───────┘      └─────────┘  │
-│                              │                           │
-│      ┌───────────────────────▼──────────────────────┐    │
-│      │ LangGraph                                    │    │
-│      │ analyze ──▶ structure ──▶ draft ──▶ finalize │    │
-│      └───────────────────────┬──────────────────────┘    │
-│                              │                           │
-└──────────────────────────────┼───────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                            Docker Compose                      │
+│                                                                │
+│  ┌────────────┐      ┌───────────────┐      ┌─────────┐        │
+│  │ Web (Vite) │      │ API (FastAPI) │      │ MongoDB │        │
+│  │ :8080      │─────▶│ :8000         │─────▶│ :27017  │        │
+│  └────────────┘      └───────┬───────┘      └─────────┘        │
+│                              │                                 │
+│   ┌──────────────────────────▼──────────────────────────────┐  │
+│   │ LangGraph                                               │  │
+│   │ analyze ──▶ structure ──▶ draft ──▶ finalize ──▶ ingest │  │
+│   └──────────────────────────┬──────────────────────────────┘  │
+│                              │                                 │
+└──────────────────────────────┼─────────────────────────────────┘
                                │
                     ┌──────────▼──────────┐
                     │ Claude / OpenRouter │
@@ -82,7 +82,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 
 ### LangGraph Workflow
 
-The document generation pipeline processes user-provided reference PDFs and context through four sequential nodes:
+The document generation pipeline processes user-provided reference PDFs and context through five sequential nodes:
 
 | Node | Purpose |
 |---|---|
@@ -90,3 +90,4 @@ The document generation pipeline processes user-provided reference PDFs and cont
 | [Structure](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/structure.txt) | Creates a hierarchical outline covering preamble, recitals, definitions, substantive sections, standard legal provisions, and execution blocks. |
 | [Draft](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/draft.txt) | Writes professional legal prose for every section using proper conventions ("shall" for obligations, "may" for permissions, numbered subsections, and cross-references). |
 | [Finalize](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/finalize.txt) | Reviews the draft for consistency (cross-references, defined terms, party names), then outputs structured JSON sections ready for rendering. |
+| [Ingest](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/parse_clauses.txt) | Extracts clause-level chunks from finalized sections and upserts them into the vector store for RAG-based retrieval. |

@@ -2,6 +2,10 @@ import { render, screen } from '@testing-library/react'
 
 let mockPathname = '/'
 
+jest.mock('./assistant-input', () => ({
+  AssistantInput: () => <div data-testid="assistant-input" />,
+}))
+
 jest.mock('react-router-dom', () => ({
   Link: jest.fn(({ children, to, className, onClick }) => (
     <a href={to} className={className} onClick={onClick}>
@@ -23,7 +27,7 @@ jest.mock('react-i18next', () => ({
         'app.toggleMenu': 'Toggle menu',
         'nav.documents': 'Documents',
         'nav.newDocument': 'New Document',
-        'search.placeholder': 'Search...',
+        'assistant.placeholder': 'Ask about your documents...',
       }
       return translations[key] || key
     },
@@ -33,11 +37,6 @@ jest.mock('react-i18next', () => ({
 jest.mock('lucide-react', () => ({
   FileText: props => <svg data-testid="icon-file-text" {...props} />,
   Plus: props => <svg data-testid="icon-plus" {...props} />,
-  Search: props => <svg data-testid="icon-search" {...props} />,
-}))
-
-jest.mock('@/shadcn/ui/input', () => ({
-  Input: props => <input {...props} />,
 }))
 
 jest.mock('@/shadcn/ui/avatar', () => ({
@@ -83,11 +82,10 @@ describe('AppShell', () => {
     expect(screen.getByTestId('icon-plus')).toBeInTheDocument()
   })
 
-  it('renders the topbar with search input and avatar', () => {
+  it('renders the topbar with assistant input and avatar', () => {
     render(<AppShell><div>content</div></AppShell>)
     expect(screen.getByTestId('topbar')).toBeInTheDocument()
-    expect(screen.getByTestId('search-input')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Search...')).toBeInTheDocument()
+    expect(screen.getByTestId('assistant-input')).toBeInTheDocument()
     expect(screen.getByTestId('user-avatar')).toBeInTheDocument()
     expect(screen.getByText('JD')).toBeInTheDocument()
   })
@@ -146,8 +144,4 @@ describe('AppShell', () => {
     expect(mockSetOpenMobile).toHaveBeenCalledWith(false)
   })
 
-  it('renders search icon in the search input wrapper', () => {
-    render(<AppShell><div>content</div></AppShell>)
-    expect(screen.getByTestId('icon-search')).toBeInTheDocument()
-  })
 })

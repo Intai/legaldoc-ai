@@ -13,6 +13,8 @@ dependencies = [
     "langchain-openai",
     "langsmith",
     "python-dotenv",
+    "google-genai",
+    "qdrant-client",
 ]
 
 [project.optional-dependencies]

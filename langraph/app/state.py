@@ -11,5 +11,6 @@ class GenerateDocumentState(TypedDict):
     outline: NotRequired[str]
     draft: NotRequired[str]
     sections: NotRequired[list[dict]]
+    document_id: NotRequired[str]
     description: NotRequired[str]
     phase_callback: NotRequired[asyncio.Queue]

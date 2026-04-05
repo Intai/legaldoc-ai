@@ -23,6 +23,7 @@ def test_create_state_with_all_optional_fields():
         "outline": "1. Definitions\n2. Obligations",
         "draft": "This agreement is entered into...",
         "sections": [{"heading": "Definitions", "body": "..."}],
+        "document_id": "doc_abc123",
         "description": "A mutual NDA",
         "phase_callback": queue,
     }
@@ -32,6 +33,7 @@ def test_create_state_with_all_optional_fields():
     assert state["outline"] == "1. Definitions\n2. Obligations"
     assert state["draft"] == "This agreement is entered into..."
     assert state["sections"] == [{"heading": "Definitions", "body": "..."}]
+    assert state["document_id"] == "doc_abc123"
     assert state["description"] == "A mutual NDA"
     assert state["phase_callback"] is queue
 

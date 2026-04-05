@@ -19,6 +19,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from api.core.config import get_settings
 from api.models.document import DocumentModel, DocumentStatus, DocumentType
 from api.models.reference import ReferenceModel
+from langraph.services import vector_store
 
 # ---------------------------------------------------------------------------
 # Legal content templates keyed by document title
@@ -668,6 +669,7 @@ async def seed():
 
     await DocumentModel.find_all().delete()
     await ReferenceModel.find_all().delete()
+    vector_store.clear_collection()
 
     documents = [DocumentModel(**data) for data in SAMPLE_DOCUMENTS]
     await DocumentModel.insert_many(documents)

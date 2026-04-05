@@ -68,6 +68,14 @@
     "validationProvideContext": "Please provide additional context.",
     "validationGenerateFirst": "Generate the document before saving."
   },
+  "assistant": {
+    "placeholder": "Ask about your documents...",
+    "thinking": "Thinking...",
+    "sources": "Sources",
+    "noResults": "No relevant results found. Try rephrasing your question.",
+    "pressEnter": "Press <kbd>Enter</kbd>",
+    "pressEsc": "Press <kbd>Esc</kbd> to close"
+  },
   "error": {
     "dialogTitle": "Something went wrong",
     "dialogDescription": "An unexpected error occurred. Please try again later.",
