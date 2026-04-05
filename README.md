@@ -71,6 +71,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 │   ┌──────────────────────────▼──────────────────────────────┐  │
 │   │ LangGraph                                               │  │
 │   │ analyze ──▶ structure ──▶ draft ──▶ finalize ──▶ ingest │  │
+│   │ retrieve ──▶ rerank ──▶ answer                          │  │
 │   └──────────────────────────┬──────────────────────────────┘  │
 │                              │                                 │
 └──────────────────────────────┼─────────────────────────────────┘
@@ -90,4 +91,14 @@ The document generation pipeline processes user-provided reference PDFs and cont
 | [Structure](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/structure.txt) | Creates a hierarchical outline covering preamble, recitals, definitions, substantive sections, standard legal provisions, and execution blocks. |
 | [Draft](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/draft.txt) | Writes professional legal prose for every section using proper conventions ("shall" for obligations, "may" for permissions, numbered subsections, and cross-references). |
 | [Finalize](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/finalize.txt) | Reviews the draft for consistency (cross-references, defined terms, party names), then outputs structured JSON sections ready for rendering. |
-| [Ingest](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/parse_clauses.txt) | Extracts clause-level chunks from finalized sections and upserts them into the vector store for RAG-based retrieval. |
+| [Ingest](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/parse_clauses.txt) | Extracts clause-level chunks from finalized sections and upserts them into the Qdrant vector store for RAG-based retrieval. |
+
+### RAG Query Pipeline
+
+The RAG query pipeline retrieves and synthesises answers from previously ingested document clauses:
+
+| Node | Purpose |
+|---|---|
+| Retrieve | Embeds the user query and searches the Qdrant vector store for the top-10 most similar document chunks. |
+| [Rerank](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rerank.txt) | Uses an LLM to score and rerank retrieved chunks by relevance, returning the top-5 results. |
+| [Answer](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rag_answer.txt) | Synthesises a concise answer from the reranked chunks via an LLM, streaming token-by-token, and extracts deduplicated source citations. |
