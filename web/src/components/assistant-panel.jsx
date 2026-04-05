@@ -50,13 +50,22 @@ export function AssistantPanel() {
                   data-testid="assistant-source-link"
                 >
                   <div className="flex items-start gap-2.5">
-                    <FileText className="size-4 text-text-muted mt-0.5 shrink-0 group-hover:text-text-link transition-colors" />
+                    <FileText
+                      className="size-4 text-text-muted mt-0.5 shrink-0 group-hover:text-text-link transition-colors"
+                      data-testid="assistant-source-icon"
+                    />
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-text-primary group-hover:text-text-link transition-colors truncate">
+                      <div
+                        className="text-sm font-medium text-text-primary group-hover:text-text-link transition-colors truncate"
+                        data-testid="assistant-source-title"
+                      >
                         {source.title}
                       </div>
-                      {source.snippet && (
-                        <div className="text-xs text-text-muted mt-0.5 line-clamp-2 leading-relaxed">
+                      {!!source.snippet && (
+                        <div
+                          className="text-xs text-text-muted mt-0.5 line-clamp-2 leading-relaxed"
+                          data-testid="assistant-source-snippet"
+                        >
                           {source.snippet}
                         </div>
                       )}

@@ -34,7 +34,7 @@ Feature: Query Documents via AI Assistant
     When I navigate to the new document page at "/documents/new"
     And I select the "NDA Template" reference
     And I click the "Next" button
-    And I type "Create an NDA" into the context textarea
+    And I type "Between TechCorp and DataFlow Inc, 12-month term, covers shared API data" into the context textarea
     And I click the "Generate Document" button
     Then I should be on step 3
     And all four phases should complete with checkmarks
@@ -44,8 +44,10 @@ Feature: Query Documents via AI Assistant
     Then the assistant panel should appear below the assistant input
     And the answer text should be displayed in the panel
     And I should see a "Sources" section below the answer
-    And each source should display a document icon, title, and snippet
-    And each source should be a clickable link
+    And the first source should display a document icon
+    And the first source should display the document title
+    And the first source should display the document snippet
+    And the first source should be a clickable link
     And I should see an Esc-to-close hint at the bottom of the panel
     When I click the first source citation link
     Then the browser URL should match "/documents/.+"

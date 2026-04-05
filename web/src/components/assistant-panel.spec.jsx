@@ -35,7 +35,7 @@ jest.mock('react-router-dom', () => ({
 }))
 
 jest.mock('lucide-react', () => ({
-  FileText: props => <svg data-testid="icon-file-text" {...props} />,
+  FileText: props => <svg {...props} data-testid="icon-file-text" />,
 }))
 
 jest.mock('./assistant-panel-loading', () => ({
