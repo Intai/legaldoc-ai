@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
-import { Search } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 import { Input } from '@/shadcn/ui/input'
 import { Popover, PopoverAnchor, PopoverContent } from '@/shadcn/ui/popover'
 import { useAssistantStore } from '../stores/assistant-store'
@@ -11,7 +11,7 @@ const preventFocus = e => e.preventDefault()
 function AssistantInput() {
   const { t } = useTranslation()
   const anchorRef = useRef(null)
-  const { query, editing, open, setQuery, submitQuery, focusQuery, close } = useAssistantStore()
+  const { query, editing, loading, open, setQuery, submitQuery, focusQuery, close } = useAssistantStore()
 
   const handleKeyDown = e => {
     if (e.key === 'Enter') {
@@ -35,7 +35,9 @@ function AssistantInput() {
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverAnchor asChild>
         <div ref={anchorRef} className="relative max-w-[480px] max-md:max-w-none max-md:w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-400" />
+          {loading
+            ? <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-400 animate-spin" />
+            : <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-400" />}
           <Input
             type="text"
             placeholder={t('assistant.placeholder')}

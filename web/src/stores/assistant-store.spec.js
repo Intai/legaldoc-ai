@@ -15,6 +15,7 @@ const initialState = {
   error: null,
   editing: false,
   open: false,
+  subscription: null,
 }
 
 beforeEach(() => {
@@ -235,5 +236,49 @@ describe('assistant-store', () => {
     useAssistantStore.getState().focusQuery()
 
     expect(useAssistantStore.getState().open).toBe(false)
+  })
+
+  it('should unsubscribe the old stream when setQuery is called during loading', () => {
+    const subject = new Subject()
+    fetchSSE.mockReturnValue(subject)
+    useAssistantStore.setState({ query: 'test query' })
+
+    useAssistantStore.getState().submitQuery()
+    expect(subject.observed).toBe(true)
+
+    useAssistantStore.getState().setQuery('new query')
+    expect(subject.observed).toBe(false)
+    expect(useAssistantStore.getState().loading).toBe(false)
+    expect(useAssistantStore.getState().subscription).toBeNull()
+  })
+
+  it('should unsubscribe the previous stream when re-submitting a query', () => {
+    const subject1 = new Subject()
+    const subject2 = new Subject()
+    fetchSSE.mockReturnValueOnce(subject1).mockReturnValueOnce(subject2)
+    useAssistantStore.setState({ query: 'first query' })
+
+    useAssistantStore.getState().submitQuery()
+    expect(subject1.observed).toBe(true)
+
+    useAssistantStore.setState({ query: 'second query' })
+    useAssistantStore.getState().submitQuery()
+    expect(subject1.observed).toBe(false)
+    expect(subject2.observed).toBe(true)
+
+    subject2.complete()
+  })
+
+  it('should unsubscribe the active stream when clear is called', () => {
+    const subject = new Subject()
+    fetchSSE.mockReturnValue(subject)
+    useAssistantStore.setState({ query: 'test query' })
+
+    useAssistantStore.getState().submitQuery()
+    expect(subject.observed).toBe(true)
+
+    useAssistantStore.getState().clear()
+    expect(subject.observed).toBe(false)
+    expect(useAssistantStore.getState().subscription).toBeNull()
   })
 })

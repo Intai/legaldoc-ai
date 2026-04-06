@@ -10,6 +10,7 @@ const initialState = {
   error: null,
   editing: false,
   open: false,
+  subscription: null,
 }
 
 /**
@@ -34,11 +35,15 @@ const initialState = {
 export const useAssistantStore = create((set, get) => ({
   ...initialState,
 
-  setQuery: query => set({ query, editing: true, open: false }),
+  setQuery: query => {
+    get().subscription?.unsubscribe()
+    set({ query, loading: false, editing: true, open: false, subscription: null })
+  },
 
   submitQuery: () => {
     const { query } = get()
     if (!query?.trim()) return
+    get().subscription?.unsubscribe()
     set({ loading: true, answer: '', sources: [], error: null, editing: false, open: true })
 
     const subscription = fetchSSE('/v1/assistant/query', {
@@ -57,10 +62,8 @@ export const useAssistantStore = create((set, get) => ({
       error: () => {
         set({ loading: false })
       },
-      complete: () => {
-        subscription.unsubscribe()
-      },
     })
+    set({ subscription })
   },
 
   focusQuery: () => {
@@ -72,5 +75,8 @@ export const useAssistantStore = create((set, get) => ({
 
   close: () => set({ open: false }),
 
-  clear: () => set(initialState),
+  clear: () => {
+    get().subscription?.unsubscribe()
+    set(initialState)
+  },
 }))

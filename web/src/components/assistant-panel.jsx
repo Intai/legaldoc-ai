@@ -36,7 +36,7 @@ export function AssistantPanel() {
         )}
 
         {hasSources && (
-          <div className="mt-4 pt-3 border-t border-border-default">
+          <div className="mt-4">
             <div className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2.5">
               {t('assistant.sources')}
             </div>

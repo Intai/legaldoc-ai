@@ -8,6 +8,8 @@ globs: web/**
   - `npm run lint -- "path/to/file.js*"` to lint a specific file.
 - `npm test -- --silent` to run all unit tests.
   - `npm test -- --runTestsByPath "path/to/file.spec.js*" --testNamePattern="matching string" --silent` to run specific unit tests in a spec file.
+- `npm run test:coverage -- --silent` to calculate test coverage for all unit tests.
+  - `npm run test:coverage -- --runTestsByPath "path/to/file.spec.js*" --silent` to calculate test coverage for a specific spec file.
 - `npm run test:e2e` to run all Playwright tests.
   - `npm run test:e2e -- --grep "matching string"` to run specific Playwright tests.
 

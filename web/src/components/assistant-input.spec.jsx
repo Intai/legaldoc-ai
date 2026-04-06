@@ -52,6 +52,7 @@ jest.mock('react-i18next', () => ({
 }))
 
 jest.mock('lucide-react', () => ({
+  Loader2: props => <svg data-testid="icon-loader" {...props} />,
   Search: props => <svg data-testid="icon-search" {...props} />,
 }))
 
@@ -75,6 +76,13 @@ describe('AssistantInput', () => {
   it('renders search icon in the input wrapper', () => {
     render(<AssistantInput />)
     expect(screen.getByTestId('icon-search')).toBeInTheDocument()
+  })
+
+  it('renders loader icon when loading', () => {
+    mockStoreState = { loading: true }
+    render(<AssistantInput />)
+    expect(screen.getByTestId('icon-loader')).toBeInTheDocument()
+    expect(screen.queryByTestId('icon-search')).not.toBeInTheDocument()
   })
 
   it('calls setQuery when typing in the input', () => {
