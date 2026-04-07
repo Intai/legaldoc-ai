@@ -1,6 +1,8 @@
+from datetime import timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from bson.codec_options import CodecOptions
 
 from api.core.config import Settings
 
@@ -53,8 +55,12 @@ class TestDependencies:
         await dependencies.init_db()
 
         mock_client_cls.assert_called_once_with(settings.mongodb_uri)
+        mock_db = mock_client[settings.mongodb_db_name]
+        mock_db.with_options.assert_called_once_with(
+            codec_options=CodecOptions(tz_aware=True, tzinfo=timezone.utc),
+        )
         mock_init_beanie.assert_awaited_once_with(
-            database=mock_client[settings.mongodb_db_name],
+            database=mock_db.with_options.return_value,
             document_models=[DocumentModel, ReferenceModel],
         )
         dependencies._client = None
@@ -77,5 +83,9 @@ class TestDependencies:
 
         result = dependencies.get_database()
 
-        assert result == mock_client[settings.mongodb_db_name]
+        mock_db = mock_client[settings.mongodb_db_name]
+        mock_db.with_options.assert_called_once_with(
+            codec_options=CodecOptions(tz_aware=True, tzinfo=timezone.utc),
+        )
+        assert result == mock_db.with_options.return_value
         dependencies._client = None

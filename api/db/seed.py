@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 
 from beanie import init_beanie
+from bson.codec_options import CodecOptions
 from motor.motor_asyncio import AsyncIOMotorClient
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -663,7 +664,9 @@ async def seed():
     settings = get_settings()
     client = AsyncIOMotorClient(settings.mongodb_uri)
     await init_beanie(
-        database=client[settings.mongodb_db_name],
+        database=client[settings.mongodb_db_name].with_options(
+            codec_options=CodecOptions(tz_aware=True, tzinfo=timezone.utc),
+        ),
         document_models=[DocumentModel, ReferenceModel],
     )
 
