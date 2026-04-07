@@ -67,6 +67,12 @@ jest.mock('../../config/index.js', () => ({
   default: { apiBaseUrl: 'http://localhost:8000/api' },
 }))
 
+const mockClearDocuments = jest.fn()
+
+jest.mock('../../stores/documents-store.js', () => ({
+  useDocumentsStore: selector => selector({ clear: mockClearDocuments }),
+}))
+
 jest.mock('../../stores/new-document-store.js', () => ({
   useNewDocumentStore: selector => selector(mockStoreState),
 }))
@@ -104,6 +110,17 @@ describe('ReviewSaveStep', () => {
     expect(screen.getByText('Back')).toBeInTheDocument()
     expect(screen.getByText('Save Document')).toBeInTheDocument()
     expect(screen.getByText('Export PDF')).toBeInTheDocument()
+  })
+
+  it('clears documents store when generatedDocumentId is truthy', () => {
+    render(<ReviewSaveStep />)
+    expect(mockClearDocuments).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not clear documents store when generatedDocumentId is null', () => {
+    mockStoreState.generatedDocumentId = null
+    render(<ReviewSaveStep />)
+    expect(mockClearDocuments).not.toHaveBeenCalled()
   })
 
   it('does not render PDF viewer when generatedDocumentId is null', () => {

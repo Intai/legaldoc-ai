@@ -4,12 +4,14 @@ import { Document, Page } from 'react-pdf'
 import { ArrowLeft, Download, Save } from 'lucide-react'
 import { Button } from '@/shadcn/ui/button'
 import config from '../../config/index.js'
+import { useDocumentsStore } from '../../stores/documents-store.js'
 import { useNewDocumentStore } from '../../stores/new-document-store.js'
 import { downloadFile, navigateTo } from '../../utils/browser.js'
 import PhaseProgress from './phase-progress.jsx'
 
 function ReviewSaveStep() {
   const { t } = useTranslation()
+  const clearDocuments = useDocumentsStore(state => state.clear)
   const generationPhase = useNewDocumentStore(state => state.generationPhase)
   const generatedDocumentId = useNewDocumentStore(state => state.generatedDocumentId)
   const saving = useNewDocumentStore(state => state.saving)
@@ -21,6 +23,14 @@ function ReviewSaveStep() {
 
   const isComplete = generationPhase === 'complete'
   const pdfUrl = `${config.apiBaseUrl}/v1/documents/${generatedDocumentId}/pdf`
+
+  // Invalidate the cached documents list so it re-fetches on next visit,
+  // covering all navigation paths (save, sidebar, back, etc.).
+  useEffect(() => {
+    if (generatedDocumentId) {
+      clearDocuments()
+    }
+  }, [generatedDocumentId, clearDocuments])
 
   useEffect(() => {
     const el = containerRef.current

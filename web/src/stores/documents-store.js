@@ -87,4 +87,6 @@ export const useDocumentsStore = create((set, get) => ({
     set({ typeFilter })
     await get().fetchDocuments()
   },
+
+  clear: () => set(initialState),
 }))

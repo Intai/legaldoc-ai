@@ -237,6 +237,26 @@ describe('documents-store', () => {
     expect(state.loading).toBe(false)
   })
 
+  it('should reset to initial state when clear is called', async () => {
+    fetchGet.mockResolvedValue({
+      data: { documents: mockDocumentsPage1, nextCursor: 'cursor1' },
+      error: null,
+    })
+    await useDocumentsStore.getState().fetchDocuments()
+    useDocumentsStore.setState({ sort: 'alpha', typeFilter: 'Contract' })
+
+    useDocumentsStore.getState().clear()
+    const state = useDocumentsStore.getState()
+
+    expect(state.documents).toEqual([])
+    expect(state.sort).toBe('recent')
+    expect(state.typeFilter).toBe('all')
+    expect(state.loading).toBe(false)
+    expect(state.loadingMore).toBe(false)
+    expect(state.nextCursor).toBeNull()
+    expect(state.hasMore).toBe(false)
+  })
+
   it('should handle fetchMore error without crashing', async () => {
     useDocumentsStore.setState({
       documents: mockDocumentsPage1,
