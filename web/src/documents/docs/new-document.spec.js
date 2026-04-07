@@ -613,5 +613,17 @@ test.describe('Feature: New Document Page', () => {
 
     // And I should see the document detail page
     await expect(page.getByTestId('detail-header')).toBeVisible();
+
+    // Capture document ID before navigating away
+    const docId = page.url().match(/\/documents\/([a-f0-9]{24})/)?.[1];
+
+    // When I click "Documents" in the sidebar navigation
+    await page.getByTestId('sidebar-nav').getByRole('link', { name: 'Documents' }).click();
+
+    // Then I should see the documents page
+    await expect(page.getByRole('heading', { name: 'Documents', level: 1 })).toBeVisible();
+
+    // And I should see a document card linking to "/documents/:id"
+    await expect(page.locator(`a[href="/documents/${docId}"]`)).toBeVisible();
   });
 });

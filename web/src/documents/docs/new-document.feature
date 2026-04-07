@@ -178,3 +178,6 @@ Feature: New Document Page
     Then the document status should be updated to "Done"
     And the browser URL should match "/documents/:id"
     And I should see the document detail page
+    When I click "Documents" in the sidebar navigation
+    Then I should see the documents page
+    And I should see a document card linking to "/documents/:id"
