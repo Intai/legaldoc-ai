@@ -54,6 +54,17 @@ def analyze_module(mock_llm):
     fake_loader_mod = ModuleType("langraph.prompts.loader")
     fake_loader_mod.load_prompt = mock_load_prompt
 
+    # Create fake llm_factory module
+    fake_llm_factory_mod = ModuleType("langraph.models.llm_factory")
+    fake_llm_factory_mod.create_pdf_content = lambda data: {
+        "type": "document",
+        "source": {
+            "type": "base64",
+            "media_type": "application/pdf",
+            "data": __import__("base64").b64encode(data).decode("utf-8"),
+        },
+    }
+
     # Clear cached module
     sys.modules.pop("langraph.nodes.analyze_node", None)
 
@@ -63,6 +74,7 @@ def analyze_module(mock_llm):
             "langchain_core": fake_lc_core,
             "langchain_core.messages": fake_lc_messages,
             "langraph.models.analyze_llm": fake_analyze_llm_mod,
+            "langraph.models.llm_factory": fake_llm_factory_mod,
             "langraph.prompts.loader": fake_loader_mod,
         },
     ):

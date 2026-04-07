@@ -1,10 +1,10 @@
-import base64
 from typing import Literal
 
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
 from langraph.models.analyze_llm import analyze_llm
+from langraph.models.llm_factory import create_pdf_content
 from langraph.prompts.loader import load_prompt
 
 
@@ -25,17 +25,7 @@ async def analyze_node(state: dict) -> dict:
     content: list[dict] = [{"type": "text", "text": prompt_text}]
 
     for ref in state["references"]:
-        encoded = base64.b64encode(ref).decode("utf-8")
-        content.append(
-            {
-                "type": "document",
-                "source": {
-                    "type": "base64",
-                    "media_type": "application/pdf",
-                    "data": encoded,
-                },
-            }
-        )
+        content.append(create_pdf_content(ref))
 
     content.append({
         "type": "text",

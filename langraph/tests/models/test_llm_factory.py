@@ -1,18 +1,18 @@
+import base64
 import importlib
 import sys
 from unittest.mock import MagicMock, patch
 
 
-def _load_module(mock_anthropic, mock_openai):
+def _load_module(mock_anthropic, mock_openai, mock_google=None):
     """Force a fresh import of models.llm_factory with mocked dependencies."""
     sys.modules.pop("langraph.models.llm_factory", None)
-    with patch.dict(
-        sys.modules,
-        {
-            "langchain_anthropic": mock_anthropic,
-            "langchain_openai": mock_openai,
-        },
-    ):
+    mocks = {
+        "langchain_anthropic": mock_anthropic,
+        "langchain_openai": mock_openai,
+        "langchain_google_genai": mock_google or MagicMock(),
+    }
+    with patch.dict(sys.modules, mocks):
         return importlib.import_module("langraph.models.llm_factory")
 
 
@@ -69,6 +69,40 @@ class TestCreateLlmOpenRouter:
         assert result == mock_openai.ChatOpenAI.return_value
 
 
+class TestCreateLlmGoogle:
+    @patch.dict(
+        "os.environ",
+        {"LANGGRAPH_LLM_PROVIDER": "google", "GOOGLE_API_KEY": "g-key"},
+        clear=True,
+    )
+    def test_google_provider_creates_google_genai(self):
+        mock_anthropic = MagicMock()
+        mock_openai = MagicMock()
+        mock_google = MagicMock()
+        mod = _load_module(mock_anthropic, mock_openai, mock_google)
+        result = mod.create_llm()
+        mock_google.ChatGoogleGenerativeAI.assert_called_once_with(
+            model="gemini-2.5-flash-lite",
+            temperature=0,
+            api_key="g-key",
+        )
+        assert result == mock_google.ChatGoogleGenerativeAI.return_value
+
+    @patch.dict(
+        "os.environ",
+        {"LANGGRAPH_LLM_PROVIDER": "google", "GOOGLE_API_KEY": "g-key"},
+        clear=True,
+    )
+    def test_custom_model_google(self):
+        mock_anthropic = MagicMock()
+        mock_openai = MagicMock()
+        mock_google = MagicMock()
+        mod = _load_module(mock_anthropic, mock_openai, mock_google)
+        mod.create_llm(model="gemini-2.5-flash")
+        call_kwargs = mock_google.ChatGoogleGenerativeAI.call_args[1]
+        assert call_kwargs["model"] == "gemini-2.5-flash"
+
+
 class TestCreateLlmOverrides:
     @patch.dict(
         "os.environ",
@@ -108,3 +142,47 @@ class TestCreateLlmOverrides:
         mod.create_llm(model="meta-llama/llama-3-8b")
         call_kwargs = mock_openai.ChatOpenAI.call_args[1]
         assert call_kwargs["model"] == "meta-llama/llama-3-8b"
+
+
+class TestCreatePdfContent:
+    PDF_BYTES = b"%PDF-1.4 test"
+
+    @patch.dict("os.environ", {}, clear=True)
+    def test_default_provider_returns_document_type(self):
+        mod = _load_module(MagicMock(), MagicMock())
+        result = mod.create_pdf_content(self.PDF_BYTES)
+        encoded = base64.b64encode(self.PDF_BYTES).decode("utf-8")
+        assert result == {
+            "type": "document",
+            "source": {
+                "type": "base64",
+                "media_type": "application/pdf",
+                "data": encoded,
+            },
+        }
+
+    @patch.dict(
+        "os.environ",
+        {"LANGGRAPH_LLM_PROVIDER": "google"},
+        clear=True,
+    )
+    def test_google_provider_returns_file_type(self):
+        mod = _load_module(MagicMock(), MagicMock())
+        result = mod.create_pdf_content(self.PDF_BYTES)
+        encoded = base64.b64encode(self.PDF_BYTES).decode("utf-8")
+        assert result == {
+            "type": "file",
+            "source_type": "base64",
+            "mime_type": "application/pdf",
+            "data": encoded,
+        }
+
+    @patch.dict(
+        "os.environ",
+        {"LANGGRAPH_LLM_PROVIDER": "openrouter"},
+        clear=True,
+    )
+    def test_openrouter_provider_returns_document_type(self):
+        mod = _load_module(MagicMock(), MagicMock())
+        result = mod.create_pdf_content(self.PDF_BYTES)
+        assert result["type"] == "document"

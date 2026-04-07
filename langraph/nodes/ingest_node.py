@@ -3,6 +3,7 @@ import json
 from langchain_core.messages import HumanMessage
 
 from langraph.models.parse_llm import parse_llm
+from langraph.utils.json_parsing import strip_fences
 from langraph.prompts.loader import load_prompt
 from langraph.services import vector_store
 
@@ -25,7 +26,7 @@ async def ingest_node(state: dict) -> dict:
     )
 
     response = await parse_llm.ainvoke([message])
-    clauses = json.loads(response.content)
+    clauses = json.loads(strip_fences(response.content))
 
     document_id = state["document_id"]
     title = state["title"]

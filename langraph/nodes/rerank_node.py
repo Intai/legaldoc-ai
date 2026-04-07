@@ -4,6 +4,7 @@ from langchain_core.messages import HumanMessage
 
 from langraph.models.rerank_llm import rerank_llm
 from langraph.prompts.loader import load_prompt
+from langraph.utils.json_parsing import strip_fences
 
 TOP_K = 5
 
@@ -29,7 +30,7 @@ async def rerank_node(state: dict) -> dict:
     )
     response = await rerank_llm.ainvoke([message])
 
-    indices = json.loads(response.content)
+    indices = json.loads(strip_fences(response.content))
     indices = [i for i in indices if 0 <= i < len(chunks)]
     indices = indices[:TOP_K]
 
