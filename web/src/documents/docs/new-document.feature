@@ -156,7 +156,7 @@ Feature: New Document Page
     When I navigate to the new document page at "/documents/new"
     And I select the "NDA Template" reference
     And I click the "Next" button
-    And I type "Create an NDA between Company A and Company B" into the context textarea
+    And I type "Between TechCorp and DataFlow Inc, 12-month term, covers shared API data" into the context textarea
     And I click the "Generate Document" button
     Then I should be on step 3
     And the "Save" button should be disabled

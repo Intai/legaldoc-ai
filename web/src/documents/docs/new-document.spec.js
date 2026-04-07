@@ -525,8 +525,8 @@ test.describe('Feature: New Document Page', () => {
     // And I click the "Next" button
     await page.getByTestId('next-button').click();
 
-    // And I type "Create an NDA between Company A and Company B" into the context textarea
-    await page.getByTestId('context-textarea').fill('Create an NDA between Company A and Company B');
+    // And I type "Between TechCorp and DataFlow Inc, 12-month term, covers shared API data" into the context textarea
+    await page.getByTestId('context-textarea').fill('Between TechCorp and DataFlow Inc, 12-month term, covers shared API data');
 
     // And I click the "Generate Document" button
     await page.getByTestId('generate-button').click();
