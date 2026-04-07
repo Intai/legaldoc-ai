@@ -7,30 +7,51 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
+def _make_clause(clause_type, heading, content):
+    """Create a fake Clause-like object with attribute access."""
+    clause = MagicMock()
+    clause.clause_type = clause_type
+    clause.heading = heading
+    clause.content = content
+    return clause
+
+
+def _make_result(clauses):
+    """Create a fake ParseClausesResult-like object."""
+    result = MagicMock()
+    result.clauses = clauses
+    return result
+
+
 @pytest.fixture()
-def llm_response():
-    """Build a fake LLM response with clause JSON."""
+def llm_result():
+    """Build a fake structured result with clause objects."""
     clauses = [
-        {
-            "clause_type": "Termination",
-            "heading": "Section 8. Termination",
-            "content": "Either party may terminate...",
-        },
-        {
-            "clause_type": "Confidentiality",
-            "heading": "Section 3. Confidentiality",
-            "content": "All information shall remain confidential...",
-        },
+        _make_clause(
+            "Termination",
+            "Section 8. Termination",
+            "Either party may terminate...",
+        ),
+        _make_clause(
+            "Confidentiality",
+            "Section 3. Confidentiality",
+            "All information shall remain confidential...",
+        ),
     ]
-    response = MagicMock()
-    response.content = json.dumps(clauses)
-    return response
+    return _make_result(clauses)
 
 
 @pytest.fixture()
-def mock_llm(llm_response):
-    llm = AsyncMock()
-    llm.ainvoke.return_value = llm_response
+def mock_structured_llm(llm_result):
+    structured = AsyncMock()
+    structured.ainvoke.return_value = llm_result
+    return structured
+
+
+@pytest.fixture()
+def mock_llm(mock_structured_llm):
+    llm = MagicMock()
+    llm.with_structured_output.return_value = mock_structured_llm
     return llm
 
 
@@ -122,10 +143,10 @@ class TestIngestNodePromptConstruction:
         ingest_module._mock_load_prompt.assert_called_once_with("parse_clauses")
 
     async def test_message_contains_prompt_and_sections(
-        self, ingest_module, base_state, mock_llm
+        self, ingest_module, base_state, mock_structured_llm
     ):
         await ingest_module.ingest_node(base_state)
-        message = mock_llm.ainvoke.call_args[0][0][0]
+        message = mock_structured_llm.ainvoke.call_args[0][0][0]
         assert message.content[0]["type"] == "text"
         assert message.content[0]["text"] == "Parse clauses prompt"
         assert message.content[1]["type"] == "text"
@@ -135,11 +156,19 @@ class TestIngestNodePromptConstruction:
 
 
 class TestIngestNodeLlmInvocation:
-    async def test_ainvoke_called_with_single_message_list(
+    async def test_with_structured_output_called_with_schema(
         self, ingest_module, base_state, mock_llm
     ):
         await ingest_module.ingest_node(base_state)
-        args = mock_llm.ainvoke.call_args[0][0]
+        mock_llm.with_structured_output.assert_called_once_with(
+            ingest_module.ParseClausesResult
+        )
+
+    async def test_ainvoke_called_with_single_message_list(
+        self, ingest_module, base_state, mock_structured_llm
+    ):
+        await ingest_module.ingest_node(base_state)
+        args = mock_structured_llm.ainvoke.call_args[0][0]
         assert len(args) == 1
         assert isinstance(args[0], ingest_module._FakeHumanMessage)
 
@@ -171,7 +200,7 @@ class TestIngestNodeChunkBuilding:
         }
 
     async def test_chunks_use_state_metadata(
-        self, ingest_module, mock_upsert
+        self, ingest_module, mock_llm, mock_upsert
     ):
         state = {
             "sections": [{"heading": "S1", "content": "text"}],
@@ -179,19 +208,16 @@ class TestIngestNodeChunkBuilding:
             "title": "NDA Agreement",
             "doc_type": "NDA",
         }
-        # Override LLM response for single clause
-        single_clause = [
-            {
-                "clause_type": "Non-Compete",
-                "heading": "S1",
-                "content": "text",
-            }
-        ]
+        # Override structured LLM response for single clause
+        single_result = _make_result(
+            [_make_clause("Non-Compete", "S1", "text")]
+        )
+        mock_structured = AsyncMock()
+        mock_structured.ainvoke.return_value = single_result
         with patch.object(
             ingest_module.parse_llm,
-            "ainvoke",
-            new_callable=AsyncMock,
-            return_value=MagicMock(content=json.dumps(single_clause)),
+            "with_structured_output",
+            return_value=mock_structured,
         ):
             await ingest_module.ingest_node(state)
 

@@ -1,11 +1,21 @@
 import json
 
 from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
 
 from langraph.models.parse_llm import parse_llm
-from langraph.utils.json_parsing import strip_fences
 from langraph.prompts.loader import load_prompt
 from langraph.services import vector_store
+
+
+class Clause(BaseModel):
+    clause_type: str
+    heading: str
+    content: str
+
+
+class ParseClausesResult(BaseModel):
+    clauses: list[Clause]
 
 
 async def ingest_node(state: dict) -> dict:
@@ -25,8 +35,9 @@ async def ingest_node(state: dict) -> dict:
         ]
     )
 
-    response = await parse_llm.ainvoke([message])
-    clauses = json.loads(strip_fences(response.content))
+    structured_llm = parse_llm.with_structured_output(ParseClausesResult)
+    result = await structured_llm.ainvoke([message])
+    clauses = result.clauses
 
     document_id = state["document_id"]
     title = state["title"]
@@ -34,12 +45,12 @@ async def ingest_node(state: dict) -> dict:
 
     chunks = [
         {
-            "content": clause["content"],
+            "content": clause.content,
             "document_id": document_id,
             "title": title,
             "type": doc_type,
-            "clause_type": clause["clause_type"],
-            "heading": clause["heading"],
+            "clause_type": clause.clause_type,
+            "heading": clause.heading,
         }
         for clause in clauses
     ]

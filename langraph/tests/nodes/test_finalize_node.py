@@ -30,13 +30,14 @@ def langchain_core_mock():
 @pytest.fixture()
 def mock_result():
     """Build a fake FinalizeResult-like object."""
+    section = MagicMock()
+    section.model_dump.return_value = {
+        "heading": "Introduction",
+        "content": [{"type": "paragraph", "text": "Hello world."}],
+    }
+
     result = MagicMock()
-    result.sections = [
-        {
-            "heading": "Introduction",
-            "content": [{"type": "paragraph", "text": "Hello world."}],
-        }
-    ]
+    result.sections = [section]
     result.description = "A brief summary."
     return result
 
@@ -113,7 +114,12 @@ class TestFinalizeNodePhaseCallback:
         assert phase == "ready"
         assert payload == {
             "title": "Test Document",
-            "sections": mock_result.sections,
+            "sections": [
+                {
+                    "heading": "Introduction",
+                    "content": [{"type": "paragraph", "text": "Hello world."}],
+                }
+            ],
             "doc_type": "contract",
             "description": "A brief summary.",
         }
@@ -172,6 +178,11 @@ class TestFinalizeNodeReturnValue:
         state = {"draft": "d", "title": "t"}
         result = await finalize_module.finalize_node(state)
         assert result == {
-            "sections": mock_result.sections,
+            "sections": [
+                {
+                    "heading": "Introduction",
+                    "content": [{"type": "paragraph", "text": "Hello world."}],
+                }
+            ],
             "description": "A brief summary.",
         }

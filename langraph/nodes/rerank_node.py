@@ -1,12 +1,16 @@
 import json
 
 from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
 
 from langraph.models.rerank_llm import rerank_llm
 from langraph.prompts.loader import load_prompt
-from langraph.utils.json_parsing import strip_fences
 
 TOP_K = 5
+
+
+class RerankResult(BaseModel):
+    indices: list[int]
 
 
 async def rerank_node(state: dict) -> dict:
@@ -28,10 +32,11 @@ async def rerank_node(state: dict) -> dict:
             {"type": "text", "text": chunks_text},
         ]
     )
-    response = await rerank_llm.ainvoke([message])
 
-    indices = json.loads(strip_fences(response.content))
-    indices = [i for i in indices if 0 <= i < len(chunks)]
+    structured_llm = rerank_llm.with_structured_output(RerankResult)
+    result = await structured_llm.ainvoke([message])
+
+    indices = [i for i in result.indices if 0 <= i < len(chunks)]
     indices = indices[:TOP_K]
 
     return {

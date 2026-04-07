@@ -1,3 +1,5 @@
+from typing import Literal
+
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
@@ -5,8 +7,19 @@ from langraph.models.finalize_llm import finalize_llm
 from langraph.prompts.loader import load_prompt
 
 
+class ContentBlock(BaseModel):
+    type: Literal["paragraph", "bold", "italic", "list"]
+    text: str | None = None
+    items: list[str] | None = None
+
+
+class Section(BaseModel):
+    heading: str
+    content: list[ContentBlock]
+
+
 class FinalizeResult(BaseModel):
-    sections: list[dict]
+    sections: list[Section]
     description: str
 
 
@@ -29,7 +42,7 @@ async def finalize_node(state: dict) -> dict:
     structured_llm = finalize_llm.with_structured_output(FinalizeResult)
     result = await structured_llm.ainvoke([message])
 
-    sections = result.sections
+    sections = [s.model_dump(exclude_none=True) for s in result.sections]
     if phase_callback:
         await phase_callback.put(
             (

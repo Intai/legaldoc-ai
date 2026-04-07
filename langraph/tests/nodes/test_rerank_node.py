@@ -6,18 +6,30 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
-@pytest.fixture()
-def mock_response():
-    """Build a fake LLM response returning indices [2, 0, 4, 1, 3]."""
-    response = MagicMock()
-    response.content = json.dumps([2, 0, 4, 1, 3])
-    return response
+def _make_rerank_result(indices):
+    """Create a fake RerankResult-like object."""
+    result = MagicMock()
+    result.indices = indices
+    return result
 
 
 @pytest.fixture()
-def mock_llm(mock_response):
-    llm = AsyncMock()
-    llm.ainvoke.return_value = mock_response
+def mock_result():
+    """Build a fake structured result returning indices [2, 0, 4, 1, 3]."""
+    return _make_rerank_result([2, 0, 4, 1, 3])
+
+
+@pytest.fixture()
+def mock_structured_llm(mock_result):
+    structured = AsyncMock()
+    structured.ainvoke.return_value = mock_result
+    return structured
+
+
+@pytest.fixture()
+def mock_llm(mock_structured_llm):
+    llm = MagicMock()
+    llm.with_structured_output.return_value = mock_structured_llm
     return llm
 
 
@@ -83,11 +95,11 @@ class TestReranknodePrompt:
         rerank_module._mock_load_prompt.assert_called_once_with("rerank")
 
     async def test_passes_prompt_query_and_chunks_as_content_parts(
-        self, rerank_module, mock_llm, sample_chunks
+        self, rerank_module, mock_structured_llm, sample_chunks
     ):
         state = {"query": "liability clause", "retrieved_chunks": sample_chunks}
         await rerank_module.rerank_node(state)
-        message = mock_llm.ainvoke.call_args[0][0][0]
+        message = mock_structured_llm.ainvoke.call_args[0][0][0]
         content = message.content
         assert content[0] == {"type": "text", "text": "prompt text"}
         assert "<user_query>\nliability clause\n</user_query>" in content[1]["text"]
@@ -96,12 +108,21 @@ class TestReranknodePrompt:
 
 
 class TestReranknodeLlmInvocation:
-    async def test_ainvoke_called_with_single_message(
+    async def test_with_structured_output_called_with_schema(
         self, rerank_module, mock_llm, sample_chunks
     ):
         state = {"query": "q", "retrieved_chunks": sample_chunks}
         await rerank_module.rerank_node(state)
-        args = mock_llm.ainvoke.call_args[0][0]
+        mock_llm.with_structured_output.assert_called_once_with(
+            rerank_module.RerankResult
+        )
+
+    async def test_ainvoke_called_with_single_message(
+        self, rerank_module, mock_structured_llm, sample_chunks
+    ):
+        state = {"query": "q", "retrieved_chunks": sample_chunks}
+        await rerank_module.rerank_node(state)
+        args = mock_structured_llm.ainvoke.call_args[0][0]
         assert len(args) == 1
         assert isinstance(args[0], rerank_module._FakeHumanMessage)
 
@@ -123,17 +144,19 @@ class TestReranknodeReturnValue:
         }
 
     async def test_truncates_to_top5_when_more_indices_returned(
-        self, rerank_module, mock_llm, mock_response, sample_chunks
+        self, rerank_module, mock_structured_llm, sample_chunks
     ):
-        mock_response.content = json.dumps([0, 1, 2, 3, 4, 5])
+        mock_structured_llm.ainvoke.return_value = _make_rerank_result(
+            [0, 1, 2, 3, 4, 5]
+        )
         state = {"query": "q", "retrieved_chunks": sample_chunks}
         result = await rerank_module.rerank_node(state)
         assert len(result["reranked_chunks"]) == 5
 
     async def test_returns_fewer_when_llm_returns_fewer_indices(
-        self, rerank_module, mock_llm, mock_response, sample_chunks
+        self, rerank_module, mock_structured_llm, sample_chunks
     ):
-        mock_response.content = json.dumps([1, 3])
+        mock_structured_llm.ainvoke.return_value = _make_rerank_result([1, 3])
         state = {"query": "q", "retrieved_chunks": sample_chunks}
         result = await rerank_module.rerank_node(state)
         assert result == {
@@ -141,9 +164,11 @@ class TestReranknodeReturnValue:
         }
 
     async def test_filters_out_of_bounds_indices(
-        self, rerank_module, mock_llm, mock_response, sample_chunks
+        self, rerank_module, mock_structured_llm, sample_chunks
     ):
-        mock_response.content = json.dumps([0, 99, -1, 2])
+        mock_structured_llm.ainvoke.return_value = _make_rerank_result(
+            [0, 99, -1, 2]
+        )
         state = {"query": "q", "retrieved_chunks": sample_chunks}
         result = await rerank_module.rerank_node(state)
         assert result == {
@@ -151,9 +176,9 @@ class TestReranknodeReturnValue:
         }
 
     async def test_returns_empty_when_llm_returns_empty_array(
-        self, rerank_module, mock_llm, mock_response, sample_chunks
+        self, rerank_module, mock_structured_llm, sample_chunks
     ):
-        mock_response.content = json.dumps([])
+        mock_structured_llm.ainvoke.return_value = _make_rerank_result([])
         state = {"query": "q", "retrieved_chunks": sample_chunks}
         result = await rerank_module.rerank_node(state)
         assert result == {"reranked_chunks": []}
