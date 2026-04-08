@@ -100,7 +100,7 @@ The RAG query pipeline retrieves and synthesises answers from previously ingeste
 
 | Node | Purpose |
 |---|---|
-| Retrieve Vector | Embeds the user query and searches the Qdrant vector store for the top-10 most similar document chunks. |
-| [Retrieve SPARQL](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/extract_regulations.txt) | Extracts regulation references from the query via LLM, then fetches matching articles from the EU Publications Office SPARQL endpoint. |
+| Retrieve&nbsp;Vector | Embeds the user query and searches the Qdrant vector store for the top-10 most similar document chunks. |
+| [Retrieve&nbsp;SPARQL](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/extract_regulations.txt) | Extracts regulation references from the query via LLM, then fetches matching articles from the EU Publications Office SPARQL endpoint. |
 | [Rerank](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rerank.txt) | Uses an LLM to score and rerank retrieved chunks by relevance, returning the top-5 results. |
 | [Answer](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rag_answer.txt) | Synthesises a concise answer from the reranked chunks via an LLM, streaming token-by-token, and extracts deduplicated source citations. |
