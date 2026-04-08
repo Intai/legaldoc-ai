@@ -16,6 +16,8 @@ dependencies = [
     "langchain-google-genai",
     "google-genai",
     "qdrant-client",
+    "SPARQLWrapper",
+    "beautifulsoup4",
 ]
 
 [project.optional-dependencies]

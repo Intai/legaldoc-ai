@@ -351,7 +351,7 @@ def build_pdf(title: str, sections: list[dict]) -> tuple[bytes, int]:
         parent=styles["BodyText"],
         fontSize=11,
         leading=15,
-        spaceAfter=6,
+        spaceAfter=10,
     )
     bold_style = ParagraphStyle(
         "DocBold",
@@ -381,9 +381,10 @@ def build_pdf(title: str, sections: list[dict]) -> tuple[bytes, int]:
                 elements.append(Paragraph(block.get("text", ""), bold_style))
             elif block_type == "italic":
                 elements.append(Paragraph(block.get("text", ""), italic_style))
-            elif block_type == "list":
-                items = block.get("items", [])
-                if items:
+
+            items = block.get("items", [])
+            if items:
+                if block_type == "list":
                     elements.append(
                         ListFlowable(
                             [
@@ -394,6 +395,9 @@ def build_pdf(title: str, sections: list[dict]) -> tuple[bytes, int]:
                             start="bulletchar",
                         )
                     )
+                else:
+                    for item in items:
+                        elements.append(Paragraph(item, body_style))
 
     page_counter: list[int] = [0]
 

@@ -98,8 +98,74 @@ class TestAnswerNodePromptFormatting:
         call_args = mod.HumanMessage.call_args
         content = call_args[1].get("content") or call_args[0][0]
         assert content[0] == {"type": "text", "text": "prompt text"}
-        assert content[1] == {"type": "text", "text": json.dumps(chunks, indent=2)}
-        assert "<user_query>\nWhat is X?\n</user_query>" in content[2]["text"]
+        assert "<user_query>\nWhat is X?\n</user_query>" in content[1]["text"]
+        assert "<document_chunks>" in content[2]["text"]
+        assert json.dumps(chunks, indent=2) in content[2]["text"]
+
+    async def test_includes_regulation_context_when_sparql_chunks_present(self):
+        mock_llm = MagicMock()
+        mock_llm.astream = MagicMock(
+            return_value=_async_iter(_make_stream_chunks(["answer"]))
+        )
+        mock_loader = MagicMock(return_value="prompt text")
+
+        mod = _import_answer_node(mock_llm, mock_loader)
+
+        sparql_chunks = [{"uri": "http://example.org/reg1", "text": "Regulation 1"}]
+        state = {
+            "query": "What is X?",
+            "reranked_chunks": _make_chunks(),
+            "sparql_chunks": sparql_chunks,
+        }
+        await mod.answer_node(state)
+
+        call_args = mod.HumanMessage.call_args
+        content = call_args[1].get("content") or call_args[0][0]
+        assert len(content) == 4
+        assert "<regulation_context>" in content[3]["text"]
+        assert json.dumps(sparql_chunks, indent=2) in content[3]["text"]
+        assert "</regulation_context>" in content[3]["text"]
+        assert "<user_query>" in content[1]["text"]
+
+    async def test_skips_regulation_context_when_sparql_chunks_empty(self):
+        mock_llm = MagicMock()
+        mock_llm.astream = MagicMock(
+            return_value=_async_iter(_make_stream_chunks(["answer"]))
+        )
+        mock_loader = MagicMock(return_value="prompt text")
+
+        mod = _import_answer_node(mock_llm, mock_loader)
+
+        state = {
+            "query": "What is X?",
+            "reranked_chunks": _make_chunks(),
+            "sparql_chunks": [],
+        }
+        await mod.answer_node(state)
+
+        call_args = mod.HumanMessage.call_args
+        content = call_args[1].get("content") or call_args[0][0]
+        assert len(content) == 3
+        for part in content:
+            assert "<regulation_context>" not in part["text"]
+
+    async def test_skips_regulation_context_when_sparql_chunks_missing(self):
+        mock_llm = MagicMock()
+        mock_llm.astream = MagicMock(
+            return_value=_async_iter(_make_stream_chunks(["answer"]))
+        )
+        mock_loader = MagicMock(return_value="prompt text")
+
+        mod = _import_answer_node(mock_llm, mock_loader)
+
+        state = {"query": "What is X?", "reranked_chunks": _make_chunks()}
+        await mod.answer_node(state)
+
+        call_args = mod.HumanMessage.call_args
+        content = call_args[1].get("content") or call_args[0][0]
+        assert len(content) == 3
+        for part in content:
+            assert "<regulation_context>" not in part["text"]
 
 
 class TestAnswerNodeEmptyChunks:

@@ -10,14 +10,16 @@ def _get_provider():
     return os.environ.get("LANGGRAPH_LLM_PROVIDER", "anthropic")
 
 
-def create_llm(*, temperature=0, model=None):
+def create_llm(*, temperature=0, models=None):
     """Create an LLM instance based on the configured provider.
 
     Keyword Args:
         temperature: Sampling temperature (default 0).
-        model: Override the default model name for the provider.
+        models: Dict mapping provider names to model names (e.g.
+            ``{"openrouter": "nvidia/...", "google": "gemini-..."}``.
     """
     provider = _get_provider()
+    model = (models or {}).get(provider)
 
     if provider == "openrouter":
         return ChatOpenAI(

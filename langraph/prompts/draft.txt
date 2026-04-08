@@ -26,4 +26,10 @@ Follow these guidelines when drafting:
 7. Balanced Provisions
    Draft provisions that are fair and balanced unless the user context specifies otherwise. Avoid one-sided terms that could be challenged for unconscionability.
 
+8. HTML Compatibility
+   If you use HTML line breaks, always use the self-closing form <br/>, never <br>.
+
+9. Document Length
+   Keep the total document concise and focused. Aim for no more than 10 pages of content. Each section should contain only the provisions necessary to address its topic — avoid verbose elaboration or redundant restatement.
+
 Draft the full text for every section in the outline. Write in a style that is ready for professional review.

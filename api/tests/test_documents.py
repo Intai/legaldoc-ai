@@ -284,6 +284,27 @@ class TestBuildPdf:
         assert pdf_bytes.startswith(b"%PDF")
         assert page_count >= 1
 
+    def test_block_with_text_and_items(self):
+        """Test that a block with both text and items renders both."""
+        from api.routes.v1.endpoints.documents import build_pdf
+
+        sections = [
+            {
+                "heading": "Signatures",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "text": "IN WITNESS WHEREOF, the parties "
+                        "have executed this Agreement.",
+                        "items": ["TechCorp", "By: ___", "Name: [Printed Name]"],
+                    },
+                ],
+            },
+        ]
+        pdf_bytes, page_count = build_pdf("Title", sections)
+
+        assert pdf_bytes.startswith(b"%PDF")
+        assert page_count >= 1
 
 
 

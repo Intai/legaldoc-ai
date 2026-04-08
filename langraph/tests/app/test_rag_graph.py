@@ -58,12 +58,15 @@ def _import_rag_graph_module():
     """Import app.rag_graph with all external deps mocked."""
     fakes = _make_fake_langgraph()
 
-    mock_retrieve = MagicMock(name="retrieve_node")
+    mock_retrieve_vector = MagicMock(name="retrieve_vector_node")
+    mock_retrieve_sparql = MagicMock(name="retrieve_sparql_node")
     mock_rerank = MagicMock(name="rerank_node")
     mock_answer = MagicMock(name="answer_node")
 
-    fake_retrieve_mod = ModuleType("langraph.nodes.retrieve_node")
-    fake_retrieve_mod.retrieve_node = mock_retrieve
+    fake_retrieve_vector_mod = ModuleType("langraph.nodes.retrieve_vector_node")
+    fake_retrieve_vector_mod.retrieve_vector_node = mock_retrieve_vector
+    fake_retrieve_sparql_mod = ModuleType("langraph.nodes.retrieve_sparql_node")
+    fake_retrieve_sparql_mod.retrieve_sparql_node = mock_retrieve_sparql
     fake_rerank_mod = ModuleType("langraph.nodes.rerank_node")
     fake_rerank_mod.rerank_node = mock_rerank
     fake_answer_mod = ModuleType("langraph.nodes.answer_node")
@@ -79,7 +82,8 @@ def _import_rag_graph_module():
         "langgraph.graph": fakes["langgraph.graph"],
         "langgraph.graph.state": fakes["langgraph.graph.state"],
         "langraph.app.rag_state": fake_rag_state_mod,
-        "langraph.nodes.retrieve_node": fake_retrieve_mod,
+        "langraph.nodes.retrieve_vector_node": fake_retrieve_vector_mod,
+        "langraph.nodes.retrieve_sparql_node": fake_retrieve_sparql_mod,
         "langraph.nodes.rerank_node": fake_rerank_mod,
         "langraph.nodes.answer_node": fake_answer_mod,
     }
@@ -89,7 +93,8 @@ def _import_rag_graph_module():
         graph = mod.build_rag_graph()
 
     return graph, fakes, {
-        "retrieve": mock_retrieve,
+        "retrieve_vector": mock_retrieve_vector,
+        "retrieve_sparql": mock_retrieve_sparql,
         "rerank": mock_rerank,
         "answer": mock_answer,
     }
@@ -102,10 +107,15 @@ class TestBuildRagGraphReturnsCompiledGraph:
 
 
 class TestBuildRagGraphNodes:
-    def test_has_retrieve_node(self):
+    def test_has_retrieve_vector_node(self):
         graph, _, mocks = _import_rag_graph_module()
-        assert "retrieve" in graph.nodes
-        assert graph.nodes["retrieve"] is mocks["retrieve"]
+        assert "retrieve_vector" in graph.nodes
+        assert graph.nodes["retrieve_vector"] is mocks["retrieve_vector"]
+
+    def test_has_retrieve_sparql_node(self):
+        graph, _, mocks = _import_rag_graph_module()
+        assert "retrieve_sparql" in graph.nodes
+        assert graph.nodes["retrieve_sparql"] is mocks["retrieve_sparql"]
 
     def test_has_rerank_node(self):
         graph, _, mocks = _import_rag_graph_module()
@@ -117,20 +127,32 @@ class TestBuildRagGraphNodes:
         assert "answer" in graph.nodes
         assert graph.nodes["answer"] is mocks["answer"]
 
-    def test_has_exactly_three_nodes(self):
+    def test_has_exactly_four_nodes(self):
         graph, _, _ = _import_rag_graph_module()
-        assert len(graph.nodes) == 3
+        assert len(graph.nodes) == 4
+
+
+class TestBuildRagGraphParallelFanOut:
+    def test_has_start_to_retrieve_vector_edge(self):
+        graph, fakes, _ = _import_rag_graph_module()
+        assert (fakes["_START"], "retrieve_vector") in graph.graph.edges
+
+    def test_has_start_to_retrieve_sparql_edge(self):
+        graph, fakes, _ = _import_rag_graph_module()
+        assert (fakes["_START"], "retrieve_sparql") in graph.graph.edges
+
+
+class TestBuildRagGraphFanInToRerank:
+    def test_has_retrieve_vector_to_rerank_edge(self):
+        graph, _, _ = _import_rag_graph_module()
+        assert ("retrieve_vector", "rerank") in graph.graph.edges
+
+    def test_has_retrieve_sparql_to_rerank_edge(self):
+        graph, _, _ = _import_rag_graph_module()
+        assert ("retrieve_sparql", "rerank") in graph.graph.edges
 
 
 class TestBuildRagGraphEdges:
-    def test_has_start_to_retrieve_edge(self):
-        graph, fakes, _ = _import_rag_graph_module()
-        assert (fakes["_START"], "retrieve") in graph.graph.edges
-
-    def test_has_retrieve_to_rerank_edge(self):
-        graph, _, _ = _import_rag_graph_module()
-        assert ("retrieve", "rerank") in graph.graph.edges
-
     def test_has_rerank_to_answer_edge(self):
         graph, _, _ = _import_rag_graph_module()
         assert ("rerank", "answer") in graph.graph.edges
@@ -139,6 +161,6 @@ class TestBuildRagGraphEdges:
         graph, fakes, _ = _import_rag_graph_module()
         assert ("answer", fakes["_END"]) in graph.graph.edges
 
-    def test_has_exactly_four_edges(self):
+    def test_has_exactly_six_edges(self):
         graph, _, _ = _import_rag_graph_module()
-        assert len(graph.graph.edges) == 4
+        assert len(graph.graph.edges) == 6

@@ -98,7 +98,7 @@ class TestCreateLlmGoogle:
         mock_openai = MagicMock()
         mock_google = MagicMock()
         mod = _load_module(mock_anthropic, mock_openai, mock_google)
-        mod.create_llm(model="gemini-2.5-flash")
+        mod.create_llm(models={"google": "gemini-2.5-flash"})
         call_kwargs = mock_google.ChatGoogleGenerativeAI.call_args[1]
         assert call_kwargs["model"] == "gemini-2.5-flash"
 
@@ -126,7 +126,7 @@ class TestCreateLlmOverrides:
         mock_anthropic = MagicMock()
         mock_openai = MagicMock()
         mod = _load_module(mock_anthropic, mock_openai)
-        mod.create_llm(model="claude-sonnet-4-5")
+        mod.create_llm(models={"anthropic": "claude-sonnet-4-5"})
         call_kwargs = mock_anthropic.ChatAnthropic.call_args[1]
         assert call_kwargs["model"] == "claude-sonnet-4-5"
 
@@ -139,7 +139,7 @@ class TestCreateLlmOverrides:
         mock_anthropic = MagicMock()
         mock_openai = MagicMock()
         mod = _load_module(mock_anthropic, mock_openai)
-        mod.create_llm(model="meta-llama/llama-3-8b")
+        mod.create_llm(models={"openrouter": "meta-llama/llama-3-8b"})
         call_kwargs = mock_openai.ChatOpenAI.call_args[1]
         assert call_kwargs["model"] == "meta-llama/llama-3-8b"
 

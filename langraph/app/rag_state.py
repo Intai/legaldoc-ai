@@ -4,7 +4,8 @@ from typing import NotRequired, TypedDict
 
 class RAGState(TypedDict):
     query: str
-    retrieved_chunks: NotRequired[list[dict]]
+    vector_chunks: NotRequired[list[dict]]
+    sparql_chunks: NotRequired[list[dict]]
     reranked_chunks: NotRequired[list[dict]]
     answer: NotRequired[str]
     sources: NotRequired[list[dict]]

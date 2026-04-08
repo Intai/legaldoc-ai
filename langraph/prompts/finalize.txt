@@ -20,6 +20,9 @@ Perform the following checks before producing the final output:
 6. Formatting
    Apply consistent formatting throughout the document.
 
+7. Conciseness
+   The final document should be concise and focused while preserving all legally essential provisions. Limit the output to at most 10 pages (roughly 60 sections).
+
 Produce the final document as a JSON object conforming to this schema:
 
 {

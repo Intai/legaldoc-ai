@@ -17,6 +17,6 @@ Follow these guidelines when evaluating relevance:
 5. Diversity of Coverage
    Where possible, select chunks that together cover different relevant aspects of the query rather than multiple chunks repeating the same information.
 
-The next message contains the user query followed by the retrieved chunks as JSON.
+The next message contains the user query, document chunks as JSON, and optionally regulation text from the EU legislation knowledge graph as additional context. Rerank only the document chunks. Use the regulation text as context to better judge which document chunks are most relevant.
 
 Return ONLY a JSON array of zero-based indices representing the top most relevant chunks, ordered from most relevant to least relevant. Do not include any explanation or additional text.
