@@ -67,7 +67,7 @@ function DocumentDetail() {
             data-testid="export-pdf-button"
           >
             <Download className="size-4 shrink-0" />
-            {t('documents.exportPdf')}
+            {t('documents.exportButton')}
           </Button>
         )}
       </div>

@@ -23,7 +23,7 @@
     "emptyFilterDescription": "Try adjusting your filters.",
     "loadMore": "Load more",
     "backToDocuments": "Back to Documents",
-    "exportPdf": "Export PDF",
+    "exportButton": "Export PDF",
     "created": "Created"
   },
   "nav": {
