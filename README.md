@@ -71,7 +71,8 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 │   ┌──────────────────────────▼──────────────────────────────┐  │
 │   │ LangGraph                                               │  │
 │   │ analyze ──▶ structure ──▶ draft ──▶ finalize ──▶ ingest │  │
-│   │ retrieve ──▶ rerank ──▶ answer                          │  │
+│   │ retrieve_vector ──┐                                     │  │
+│   │ retrieve_sparql ──┤──▶ rerank ──▶ answer                │  │
 │   └──────────────────────────┬──────────────────────────────┘  │
 │                              │                                 │
 └──────────────────────────────┼─────────────────────────────────┘
@@ -95,10 +96,11 @@ The document generation pipeline processes user-provided reference PDFs and cont
 
 ### RAG Query Pipeline
 
-The RAG query pipeline retrieves and synthesises answers from previously ingested document clauses:
+The RAG query pipeline retrieves and synthesises answers from previously ingested document clauses and EU regulation articles:
 
 | Node | Purpose |
 |---|---|
-| Retrieve | Embeds the user query and searches the Qdrant vector store for the top-10 most similar document chunks. |
+| Retrieve Vector | Embeds the user query and searches the Qdrant vector store for the top-10 most similar document chunks. |
+| [Retrieve SPARQL](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/extract_regulations.txt) | Extracts regulation references from the query via LLM, then fetches matching articles from the EU Publications Office SPARQL endpoint. |
 | [Rerank](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rerank.txt) | Uses an LLM to score and rerank retrieved chunks by relevance, returning the top-5 results. |
 | [Answer](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rag_answer.txt) | Synthesises a concise answer from the reranked chunks via an LLM, streaming token-by-token, and extracts deduplicated source citations. |
