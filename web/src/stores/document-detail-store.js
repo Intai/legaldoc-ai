@@ -1,9 +1,11 @@
 import { create } from 'zustand'
-import { fetchGet } from '../utils/api.js'
+import { STATUS_DONE } from '../constants.js'
+import { fetchGet, fetchPut } from '../utils/api.js'
 
 const initialState = {
   documents: {},
   loading: false,
+  saving: false,
 }
 
 /**
@@ -16,6 +18,8 @@ const initialState = {
  * Actions:
  * - `fetchDocument(id)` - Fetches a single document by ID from
  *   GET /v1/documents/{id} and caches the result keyed by ID.
+ * - `confirmDraft(id)` - Confirms a draft document by updating its status
+ *   to Done via PUT /v1/documents/{id}/status and caches the updated document.
  */
 export const useDocumentDetailStore = create(set => ({
   ...initialState,
@@ -29,5 +33,30 @@ export const useDocumentDetailStore = create(set => ({
       documents: { ...state.documents, [id]: data ?? null },
       loading: false,
     }))
+  },
+
+  /**
+   * Confirms a draft document by setting its status to Done.
+   * @param {string} id - The document ID to confirm
+   * @returns {Promise<boolean>} Whether the confirmation succeeded
+   */
+  confirmDraft: async id => {
+    if (!id) return false
+
+    set({ saving: true })
+    const { data } = await fetchPut(`/v1/documents/${id}/status`, {
+      status: STATUS_DONE,
+    })
+
+    if (data) {
+      set(state => ({
+        documents: { ...state.documents, [id]: data },
+        saving: false,
+      }))
+    } else {
+      set({ saving: false })
+    }
+
+    return !!data
   },
 }))

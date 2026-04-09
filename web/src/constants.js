@@ -9,3 +9,7 @@ export const PHASES = [
   PHASE_DRAFTING,
   PHASE_FINALIZING,
 ]
+
+export const STATUS_DONE = 'Done'
+export const STATUS_DRAFT = 'Draft'
+export const STATUS_GENERATING = 'Generating'

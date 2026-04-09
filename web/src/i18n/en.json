@@ -23,6 +23,8 @@
     "emptyFilterDescription": "Try adjusting your filters.",
     "loadMore": "Load more",
     "backToDocuments": "Back to Documents",
+    "backButton": "Back",
+    "confirmDraftButton": "Confirm Draft",
     "exportButton": "Export PDF",
     "created": "Created"
   },

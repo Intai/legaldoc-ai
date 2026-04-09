@@ -26,8 +26,10 @@ const initialState = {
  * - `hasMore` {boolean} - Derived from nextCursor; true when more pages exist.
  *
  * Actions:
- * - `fetchDocuments()` - Fetches the first page of documents using the current
+ * - `fetchDocuments(options)` - Fetches the first page of documents using the current
  *   sort and typeFilter. Resets the documents list and cursor.
+ *   When `options.refresh` is true, uses `Math.max(documents.length, 6)` as the
+ *   limit to preserve the visible count.
  * - `fetchMore()` - Fetches the next page using the cursor and appends results
  *   to the existing documents list.
  * - `setSort(sort)` - Updates the sort value and re-fetches documents.
@@ -36,15 +38,16 @@ const initialState = {
 export const useDocumentsStore = create((set, get) => ({
   ...initialState,
 
-  fetchDocuments: async () => {
-    const { sort, typeFilter } = get()
+  fetchDocuments: async ({ refresh } = {}) => {
+    const { sort, typeFilter, documents } = get()
+    const limit = refresh ? Math.max(documents.length, 6) : 6
     set({ loading: true })
 
     const { data } = await fetchGet('/v1/documents', {
       sort,
       type: typeFilter === 'all' ? null : typeFilter,
       cursor: null,
-      limit: '6',
+      limit: String(limit),
     })
 
     const cursor = data?.nextCursor ?? null

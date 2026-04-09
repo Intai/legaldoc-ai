@@ -84,7 +84,7 @@ function AppShell({ children }) {
           className="flex h-14 shrink-0 items-center gap-3 border-b border-border-default bg-bg-card px-5"
           data-testid="topbar"
         >
-          <SidebarTrigger className="lg:hidden [&_svg]:size-5!" data-testid="sidebar-trigger" />
+          <SidebarTrigger className="lg:hidden -mx-1 [&_svg]:size-5!" data-testid="sidebar-trigger" />
 
           <div className="flex-1">
             <AssistantInput />

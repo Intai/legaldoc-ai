@@ -1,12 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Document, Page } from 'react-pdf'
 import { Link, useParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { ArrowLeft, Download } from 'lucide-react'
+import { ArrowLeft, CircleCheck, Download } from 'lucide-react'
 import { Button } from '@/shadcn/ui/button'
 import config from '../../config/index.js'
+import { STATUS_DRAFT } from '../../constants.js'
 import { useDocumentDetailStore } from '../../stores/document-detail-store.js'
+import { useDocumentsStore } from '../../stores/documents-store.js'
 import { downloadFile } from '../../utils/browser.js'
 import DocumentDetailSkeleton from './document-detail-skeleton.jsx'
 
@@ -15,7 +17,9 @@ function DocumentDetail() {
   const { id } = useParams()
   const document = useDocumentDetailStore(state => state.documents[id])
   const loading = useDocumentDetailStore(state => state.loading)
+  const saving = useDocumentDetailStore(state => state.saving)
   const fetchDocument = useDocumentDetailStore(state => state.fetchDocument)
+  const confirmDraft = useDocumentDetailStore(state => state.confirmDraft)
   const [numPages, setNumPages] = useState(0)
   const [pageWidth, setPageWidth] = useState(720)
   const containerRef = useRef(null)
@@ -35,15 +39,22 @@ function DocumentDetail() {
     return () => observer.disconnect()
   }, [isLoading])
 
-  const onLoadSuccess = useCallback(({ numPages: total }) => {
+  const onLoadSuccess = ({ numPages: total }) => {
     setNumPages(total)
-  }, [])
+  }
 
   const pdfUrl = `${config.apiBaseUrl}/v1/documents/${id}/pdf`
 
-  const handleExportPdf = useCallback(() => {
+  const handleConfirmDraft = async () => {
+    const success = await confirmDraft(id)
+    if (success) {
+      useDocumentsStore.getState().fetchDocuments({ refresh: true })
+    }
+  }
+
+  const handleExportPdf = () => {
     downloadFile(pdfUrl)
-  }, [pdfUrl])
+  }
 
   return (
     <div>
@@ -53,22 +64,39 @@ function DocumentDetail() {
       >
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600 no-underline rounded-md px-2 py-1 transition-colors hover:text-neutral-800 hover:bg-neutral-50"
+          className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600 no-underline rounded-md px-2 py-1 max-md:pl-0 transition-colors hover:text-neutral-800 hover:bg-neutral-50"
           data-testid="back-link"
         >
           <ArrowLeft className="size-4 shrink-0" />
-          {t('documents.backToDocuments')}
+          <span className="max-md:hidden">{t('documents.backToDocuments')}</span>
+          <span className="md:hidden">{t('documents.backButton')}</span>
         </Link>
         {!isLoading && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportPdf}
-            data-testid="export-pdf-button"
-          >
-            <Download className="size-4 shrink-0" />
-            {t('documents.exportButton')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {document.status === STATUS_DRAFT && (
+              <Button
+                variant="default"
+                size="sm"
+                disabled={saving}
+                onClick={handleConfirmDraft}
+                data-testid="confirm-draft-button"
+              >
+                <CircleCheck className="size-4 shrink-0" />
+                {t('documents.confirmDraftButton')}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPdf}
+              data-testid="export-pdf-button"
+            >
+              <Download className="size-4 shrink-0" />
+              <span className={document.status === STATUS_DRAFT ? 'max-md:hidden' : undefined}>
+                {t('documents.exportButton')}
+              </span>
+            </Button>
+          </div>
         )}
       </div>
 

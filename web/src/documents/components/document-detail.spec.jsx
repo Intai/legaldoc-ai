@@ -2,6 +2,8 @@ import React from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 
 const mockFetchDocument = jest.fn()
+const mockConfirmDraft = jest.fn()
+const mockFetchDocuments = jest.fn()
 
 let mockStoreState = {}
 
@@ -9,12 +11,20 @@ jest.mock('../../stores/document-detail-store.js', () => ({
   useDocumentDetailStore: jest.fn(selector => selector(mockStoreState)),
 }))
 
+jest.mock('../../stores/documents-store.js', () => ({
+  useDocumentsStore: {
+    getState: () => ({ fetchDocuments: mockFetchDocuments }),
+  },
+}))
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: key => {
       const translations = {
         'documents.backToDocuments': 'Back to Documents',
-        'documents.exportPdf': 'Export PDF',
+        'documents.backButton': 'Back',
+        'documents.confirmDraftButton': 'Confirm Draft',
+        'documents.exportButton': 'Export PDF',
         'documents.created': 'Created',
       }
       return translations[key] || key
@@ -51,6 +61,7 @@ jest.mock('date-fns', () => ({
 
 jest.mock('lucide-react', () => ({
   ArrowLeft: props => <svg data-testid="arrow-left-icon" {...props} />,
+  CircleCheck: props => <svg data-testid="circle-check-icon" {...props} />,
   Download: props => <svg data-testid="download-icon" {...props} />,
 }))
 
@@ -81,14 +92,22 @@ const mockDocument = {
   id: 'doc-123',
   title: 'Non-Disclosure Agreement',
   type: 'Contract',
+  status: 'Done',
   createdAt: '2026-03-25T10:00:00Z',
+}
+
+const mockDraftDocument = {
+  ...mockDocument,
+  status: 'Draft',
 }
 
 function buildStoreState(overrides = {}) {
   return {
     documents: { 'doc-123': mockDocument },
     loading: false,
+    saving: false,
     fetchDocument: mockFetchDocument,
+    confirmDraft: mockConfirmDraft,
     ...overrides,
   }
 }
@@ -106,6 +125,7 @@ describe('DocumentDetail', () => {
 
     const backLink = screen.getByTestId('back-link')
     expect(backLink).toHaveTextContent('Back to Documents')
+    expect(backLink).toHaveTextContent('Back')
     expect(backLink).toHaveAttribute('href', '/')
 
     const exportBtn = screen.getByTestId('export-pdf-button')
@@ -214,5 +234,69 @@ describe('DocumentDetail', () => {
     expect(screen.getByTestId('pdf-page-1')).toBeInTheDocument()
     expect(screen.getByTestId('pdf-page-2')).toBeInTheDocument()
     expect(screen.getByTestId('pdf-page-3')).toBeInTheDocument()
+  })
+
+  it('shows confirm draft button when document status is Draft', () => {
+    mockStoreState = buildStoreState({ documents: { 'doc-123': mockDraftDocument } })
+    render(<DocumentDetail />)
+
+    const confirmBtn = screen.getByTestId('confirm-draft-button')
+    expect(confirmBtn).toHaveTextContent('Confirm Draft')
+    expect(confirmBtn).not.toBeDisabled()
+  })
+
+  it('hides confirm draft button when document status is not Draft', () => {
+    render(<DocumentDetail />)
+    expect(screen.queryByTestId('confirm-draft-button')).not.toBeInTheDocument()
+  })
+
+  it('disables confirm draft button while saving', () => {
+    mockStoreState = buildStoreState({ documents: { 'doc-123': mockDraftDocument }, saving: true })
+    render(<DocumentDetail />)
+    expect(screen.getByTestId('confirm-draft-button')).toBeDisabled()
+  })
+
+  it('calls confirmDraft and refreshes documents list on success', async () => {
+    mockConfirmDraft.mockResolvedValue(true)
+    mockStoreState = buildStoreState({ documents: { 'doc-123': mockDraftDocument } })
+    render(<DocumentDetail />)
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('confirm-draft-button'))
+    })
+
+    expect(mockConfirmDraft).toHaveBeenCalledWith('doc-123')
+    expect(mockFetchDocuments).toHaveBeenCalledWith({ refresh: true })
+  })
+
+  it('does not refresh documents list when confirmDraft fails', async () => {
+    mockConfirmDraft.mockResolvedValue(false)
+    mockStoreState = buildStoreState({ documents: { 'doc-123': mockDraftDocument } })
+    render(<DocumentDetail />)
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('confirm-draft-button'))
+    })
+
+    expect(mockConfirmDraft).toHaveBeenCalledWith('doc-123')
+    expect(mockFetchDocuments).not.toHaveBeenCalled()
+    expect(mockFetchDocuments).not.toHaveBeenCalled()
+  })
+
+  it('hides export button label on mobile when document is a draft', () => {
+    mockStoreState = buildStoreState({ documents: { 'doc-123': mockDraftDocument } })
+    render(<DocumentDetail />)
+
+    const exportBtn = screen.getByTestId('export-pdf-button')
+    const label = exportBtn.querySelector('span')
+    expect(label).toHaveClass('max-md:hidden')
+  })
+
+  it('shows export button label without mobile-hidden class when document is not a draft', () => {
+    render(<DocumentDetail />)
+
+    const exportBtn = screen.getByTestId('export-pdf-button')
+    const label = exportBtn.querySelector('span')
+    expect(label).not.toHaveClass('max-md:hidden')
   })
 })

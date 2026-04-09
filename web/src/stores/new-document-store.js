@@ -1,6 +1,6 @@
 import { filter, prepend, test as rTest, toLower } from 'ramda'
 import { create } from 'zustand'
-import { PHASE_ANALYZING } from '../constants.js'
+import { PHASE_ANALYZING, STATUS_DONE } from '../constants.js'
 import { fetchGet, fetchPut, fetchSSE, fetchUpload } from '../utils/api.js'
 import { useDialogStore } from './dialog-store.js'
 
@@ -147,7 +147,7 @@ export const useNewDocumentStore = create((set, get) => ({
 
     set({ saving: true })
     const { data } = await fetchPut(`/v1/documents/${generatedDocumentId}/status`, {
-      status: 'Done',
+      status: STATUS_DONE,
     })
     set({ saving: false })
 

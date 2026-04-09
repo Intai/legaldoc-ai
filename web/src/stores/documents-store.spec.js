@@ -225,6 +225,41 @@ describe('documents-store', () => {
     expect(state.documents).toEqual(mockDocumentsPage2)
   })
 
+  it('should use default limit of 6 when refresh is true but documents count is less', async () => {
+    useDocumentsStore.setState({ documents: [{ id: '1' }, { id: '2' }] })
+    fetchGet.mockResolvedValue({
+      data: { documents: mockDocumentsPage1, nextCursor: null },
+      error: null,
+    })
+
+    await useDocumentsStore.getState().fetchDocuments({ refresh: true })
+
+    expect(fetchGet).toHaveBeenCalledWith('/v1/documents', {
+      sort: 'recent',
+      type: null,
+      cursor: null,
+      limit: '6',
+    })
+  })
+
+  it('should use documents count as limit when refresh is true and documents exceed 6', async () => {
+    const manyDocs = Array.from({ length: 12 }, (_, i) => ({ id: String(i) }))
+    useDocumentsStore.setState({ documents: manyDocs })
+    fetchGet.mockResolvedValue({
+      data: { documents: mockDocumentsPage1, nextCursor: null },
+      error: null,
+    })
+
+    await useDocumentsStore.getState().fetchDocuments({ refresh: true })
+
+    expect(fetchGet).toHaveBeenCalledWith('/v1/documents', {
+      sort: 'recent',
+      type: null,
+      cursor: null,
+      limit: '12',
+    })
+  })
+
   it('should handle fetch error without crashing', async () => {
     fetchGet.mockResolvedValue({ data: null, error: { message: 'fail', code: 'ERR' } })
 
