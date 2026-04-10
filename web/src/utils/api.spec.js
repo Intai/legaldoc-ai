@@ -1,5 +1,12 @@
 import { fetchGet, fetchPost, fetchPut, fetchSSE, fetchUpload } from './api.js'
 import { useDialogStore } from '../stores/dialog-store.js'
+import { debug, error, warn } from '../logger.js'
+
+jest.mock('../logger.js', () => ({
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+}))
 
 jest.mock('../stores/dialog-store.js', () => {
   const errorFn = jest.fn()
@@ -48,6 +55,9 @@ describe('fetchGet', () => {
 
     expect(result).toEqual({ data: null, error: apiError })
     expect(mockError).toHaveBeenCalledWith(apiError)
+    expect(warn).toHaveBeenCalledWith('API error', {
+      method: 'GET', path: '/v1/documents', code: 'NOT_FOUND', message: 'Not found',
+    })
   })
 
   it('triggers dialog store error and returns error on network failure', async () => {
@@ -62,6 +72,9 @@ describe('fetchGet', () => {
     expect(mockError).toHaveBeenCalledWith({
       message: 'Failed to fetch',
       code: 'NETWORK_ERROR',
+    })
+    expect(error).toHaveBeenCalledWith('Network error', {
+      method: 'GET', path: '/v1/documents', message: 'Failed to fetch',
     })
   })
 
@@ -121,6 +134,9 @@ describe('fetchPost', () => {
 
     expect(result).toEqual({ data: null, error: apiError })
     expect(mockError).toHaveBeenCalledWith(apiError)
+    expect(warn).toHaveBeenCalledWith('API error', {
+      method: 'POST', path: '/v1/documents', code: 'VALIDATION_ERROR', message: 'Validation failed',
+    })
   })
 
   it('triggers dialog store error and returns error on network failure', async () => {
@@ -135,6 +151,9 @@ describe('fetchPost', () => {
     expect(mockError).toHaveBeenCalledWith({
       message: 'Network error',
       code: 'NETWORK_ERROR',
+    })
+    expect(error).toHaveBeenCalledWith('Network error', {
+      method: 'POST', path: '/v1/documents', message: 'Network error',
     })
   })
 })
@@ -170,6 +189,9 @@ describe('fetchUpload', () => {
 
     expect(result).toEqual({ data: null, error: apiError })
     expect(mockError).toHaveBeenCalledWith(apiError)
+    expect(warn).toHaveBeenCalledWith('API error', {
+      method: 'POST', path: '/v1/documents/upload', code: 'FILE_TOO_LARGE', message: 'File too large',
+    })
   })
 
   it('triggers dialog store error and returns error on network failure', async () => {
@@ -184,6 +206,9 @@ describe('fetchUpload', () => {
     expect(mockError).toHaveBeenCalledWith({
       message: 'Upload failed',
       code: 'NETWORK_ERROR',
+    })
+    expect(error).toHaveBeenCalledWith('Network error', {
+      method: 'POST', path: '/v1/documents/upload', message: 'Upload failed',
     })
   })
 })
@@ -218,6 +243,9 @@ describe('fetchPut', () => {
 
     expect(result).toEqual({ data: null, error: apiError })
     expect(mockError).toHaveBeenCalledWith(apiError)
+    expect(warn).toHaveBeenCalledWith('API error', {
+      method: 'PUT', path: '/v1/documents/999/status', code: 'NOT_FOUND', message: 'Not found',
+    })
   })
 
   it('triggers dialog store error and returns error on network failure', async () => {
@@ -232,6 +260,9 @@ describe('fetchPut', () => {
     expect(mockError).toHaveBeenCalledWith({
       message: 'Connection refused',
       code: 'NETWORK_ERROR',
+    })
+    expect(error).toHaveBeenCalledWith('Network error', {
+      method: 'PUT', path: '/v1/documents/1/status', message: 'Connection refused',
     })
   })
 })
@@ -349,6 +380,9 @@ describe('fetchSSE', () => {
           message: 'SSE connection failed',
           code: 'NETWORK_ERROR',
         })
+        expect(error).toHaveBeenCalledWith('SSE error', {
+          path: '/v1/generate', message: 'SSE connection failed',
+        })
         done()
       },
     })
@@ -392,6 +426,7 @@ describe('fetchSSE', () => {
 
     expect(errorFn).not.toHaveBeenCalled()
     expect(mockError).not.toHaveBeenCalled()
+    expect(debug).toHaveBeenCalledWith('SSE aborted', { path: '/v1/generate' })
   })
 
   it('ignores lines that are not event or data fields', done => {

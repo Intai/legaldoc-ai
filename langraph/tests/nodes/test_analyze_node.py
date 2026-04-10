@@ -1,10 +1,25 @@
 import asyncio
 import base64
+import functools
 import sys
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 @pytest.fixture()
@@ -65,6 +80,10 @@ def analyze_module(mock_llm):
         },
     }
 
+    # Create fake tracing module
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     # Clear cached module
     sys.modules.pop("langraph.nodes.analyze_node", None)
 
@@ -76,6 +95,7 @@ def analyze_module(mock_llm):
             "langraph.models.analyze_llm": fake_analyze_llm_mod,
             "langraph.models.llm_factory": fake_llm_factory_mod,
             "langraph.prompts.loader": fake_loader_mod,
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         import importlib
@@ -210,3 +230,15 @@ class TestAnalyzeNodeReturnValue:
             "title": mock_result.title,
             "doc_type": mock_result.doc_type,
         }
+
+
+class TestAnalyzeNodeTracing:
+    def test_traced_node_decorator_applied_with_analyze_name(self, analyze_module):
+        assert analyze_module.analyze_node._traced_node_name == "analyze"
+
+    async def test_node_returns_correct_result_through_decorator(
+        self, analyze_module, mock_result
+    ):
+        state = {"references": [], "context": "ctx"}
+        result = await analyze_module.analyze_node(state)
+        assert result["analysis"] == mock_result.analysis

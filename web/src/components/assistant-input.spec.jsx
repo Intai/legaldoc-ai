@@ -93,8 +93,10 @@ describe('AssistantInput', () => {
 
   it('calls submitQuery when Enter is pressed', () => {
     render(<AssistantInput />)
-    fireEvent.keyDown(screen.getByTestId('assistant-input'), { key: 'Enter' })
+    const input = screen.getByTestId('assistant-input')
+    fireEvent.keyDown(input, { key: 'Enter' })
     expect(mockSubmitQuery).toHaveBeenCalled()
+    expect(input).toHaveAttribute('data-keydown', 'Enter')
   })
 
   it('does not call submitQuery for non-Enter keys', () => {

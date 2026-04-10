@@ -4,18 +4,19 @@ export
 .PHONY: help dev dev-bg dev-stop db-seed install lint test coverage regression
 
 _svc := $(or $(svc),api web)
+_signoz := $(if $(signoz),-f docker-compose.signoz.yml)
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*## .*$$' Makefile | sed 's/:.*## /	/' | awk -F'\t' '{printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-dev: ## Start development environment
-	docker compose up --build
+dev: ## Start development environment (signoz=1 for observability)
+	docker compose -f docker-compose.yml $(_signoz) up
 
-dev-bg: ## Start development environment in background
-	docker compose up --build -d
+dev-bg: ## Start development environment in background (signoz=1 for observability)
+	docker compose -f docker-compose.yml $(_signoz) up -d
 
-dev-stop: ## Stop development environment
-	docker compose down
+dev-stop: ## Stop development environment (signoz=1 for observability)
+	docker compose -f docker-compose.yml $(_signoz) down
 
 db-seed: ## Seed the database
 	docker compose exec api python -m api.db.seed
@@ -58,9 +59,11 @@ ifneq ($(filter web,$(_svc)),)
 	cd web && npm run test:coverage -- --coverageReporters=text --coverageReporters=json-summary
 endif
 
-regression: ## Run e2e tests (include=all to include long scenarios)
+regression: ## Run e2e tests (include=all|timeout|signoz)
 ifeq ($(include),all)
 	cd web && npm run test:e2e
+else ifdef include
+	cd web && npm run test:e2e -- --grep "@$(include)"
 else
-	cd web && npm run test:e2e -- --grep-invert "@timeout-"
+	cd web && npm run test:e2e -- --grep-invert "@timeout|@signoz"
 endif

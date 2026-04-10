@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from langraph.models.extract_regulations_llm import extract_regulations_llm
 from langraph.prompts.loader import load_prompt
 from langraph.services import sparql_store
+from langraph.services.tracing import traced_node
 
 
 class Regulation(BaseModel):
@@ -18,6 +19,7 @@ class ExtractRegulationsResult(BaseModel):
     regulations: list[Regulation]
 
 
+@traced_node("retrieve_sparql")
 async def retrieve_sparql_node(state: dict) -> dict:
     """Extract regulation references from the query and fetch matching articles."""
     prompt = load_prompt("extract_regulations")

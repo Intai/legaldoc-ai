@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     mongodb_db_name: str = "legaldoc_ai"
     mongodb_host: str = "mongodb"
     mongodb_port: int = 27017
+    otel_exporter_endpoint: str = ""
+    clickhouse_host: str = "clickhouse"
+    clickhouse_port: int = 8123
+    clickhouse_password: str = ""
 
     model_config = {"env_prefix": ""}
 

@@ -17,6 +17,13 @@ dependencies = [
     "reportlab",
     "sse-starlette",
     "python-multipart",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp",
+    "opentelemetry-instrumentation-fastapi",
+    "opentelemetry-instrumentation-pymongo",
+    "opentelemetry-instrumentation-logging",
+    "clickhouse-connect",
 ]
 
 [project.optional-dependencies]

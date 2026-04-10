@@ -4,6 +4,7 @@ from langchain_core.messages import HumanMessage
 
 from langraph.models.answer_llm import answer_llm
 from langraph.prompts.loader import load_prompt
+from langraph.services.tracing import traced_node
 
 
 def _deduplicate_sources(chunks: list[dict]) -> list[dict]:
@@ -24,6 +25,7 @@ def _deduplicate_sources(chunks: list[dict]) -> list[dict]:
     return sources
 
 
+@traced_node("answer")
 async def answer_node(state: dict) -> dict:
     """Build a prompt with reranked chunks and stream the LLM answer."""
     reranked_chunks = state.get("reranked_chunks", [])

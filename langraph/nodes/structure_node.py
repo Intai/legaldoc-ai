@@ -2,8 +2,10 @@ from langchain_core.messages import HumanMessage
 
 from langraph.models.structure_llm import structure_llm
 from langraph.prompts.loader import load_prompt
+from langraph.services.tracing import traced_node
 
 
+@traced_node("structure")
 async def structure_node(state: dict) -> dict:
     """Generate a document outline from the analysis and context."""
     phase_callback = state.get("phase_callback")

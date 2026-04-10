@@ -46,6 +46,7 @@ function AssistantInput() {
             onFocus={focusQuery}
             onKeyDown={handleKeyDown}
             className={`pl-10 ${editing && !open ? 'pr-24' : ''}`}
+            data-keydown="Enter"
             data-testid="assistant-input"
           />
           {editing && !open && query?.trim() && (

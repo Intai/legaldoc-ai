@@ -1,7 +1,9 @@
 import asyncio
+import functools
 import importlib
 import json
 import sys
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 
@@ -21,6 +23,20 @@ async def _async_iter(items):
         yield item
 
 
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
+
+
 def _import_answer_node(mock_llm, mock_loader):
     """Import answer_node with mocked dependencies."""
     sys.modules.pop("langraph.nodes.answer_node", None)
@@ -30,6 +46,9 @@ def _import_answer_node(mock_llm, mock_loader):
     mock_langchain_core = MagicMock()
     mock_langchain_core.messages = mock_messages
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     with patch.dict(
         sys.modules,
         {
@@ -37,6 +56,7 @@ def _import_answer_node(mock_llm, mock_loader):
             "langchain_core.messages": mock_messages,
             "langraph.models.answer_llm": MagicMock(answer_llm=mock_llm),
             "langraph.prompts.loader": MagicMock(load_prompt=mock_loader),
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         mod = importlib.import_module("langraph.nodes.answer_node")
@@ -398,3 +418,23 @@ class TestAnswerNodeReturnValue:
         assert len(result["sources"]) == 2
 
 
+class TestAnswerNodeTracing:
+    def test_traced_node_decorator_applied_with_answer_name(self):
+        mock_llm = MagicMock()
+        mock_llm.astream = MagicMock(
+            return_value=_async_iter(_make_stream_chunks(["ok"]))
+        )
+        mock_loader = MagicMock(return_value="prompt text")
+        mod = _import_answer_node(mock_llm, mock_loader)
+        assert mod.answer_node._traced_node_name == "answer"
+
+    async def test_node_returns_correct_result_through_decorator(self):
+        mock_llm = MagicMock()
+        mock_llm.astream = MagicMock(
+            return_value=_async_iter(_make_stream_chunks(["response"]))
+        )
+        mock_loader = MagicMock(return_value="prompt text")
+        mod = _import_answer_node(mock_llm, mock_loader)
+        state = {"query": "test", "reranked_chunks": _make_chunks()}
+        result = await mod.answer_node(state)
+        assert result["answer"] == "response"

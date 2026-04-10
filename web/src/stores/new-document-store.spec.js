@@ -8,6 +8,14 @@ import {
   PHASE_DRAFTING,
   PHASE_STRUCTURING,
 } from '../constants.js'
+import { debug, info, error as logError, warn } from '../logger.js'
+
+jest.mock('../logger.js', () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+}))
 
 jest.mock('../utils/api.js', () => ({
   fetchGet: jest.fn(),
@@ -36,6 +44,7 @@ const initialState = {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks()
   fetchGet.mockReset()
   fetchPut.mockReset()
   fetchSSE.mockReset()
@@ -196,6 +205,7 @@ describe('new-document-store', () => {
 
     useNewDocumentStore.getState().generateDocument()
 
+    expect(info).toHaveBeenCalledWith('Document generation started', { referenceCount: 2, contextLength: 10 })
     expect(fetchSSE).toHaveBeenCalledWith('/v1/documents/generate', {
       referenceIds: ['ref-1', 'ref-2'],
       context: 'My context',
@@ -204,12 +214,14 @@ describe('new-document-store', () => {
     expect(useNewDocumentStore.getState().currentStep).toBe(3)
 
     subject.next({ event: 'phase', data: { phase: PHASE_STRUCTURING } })
+    expect(debug).toHaveBeenCalledWith('Generation phase', { phase: PHASE_STRUCTURING })
     expect(useNewDocumentStore.getState().generationPhase).toBe(PHASE_STRUCTURING)
 
     subject.next({ event: 'phase', data: { phase: PHASE_DRAFTING } })
     expect(useNewDocumentStore.getState().generationPhase).toBe(PHASE_DRAFTING)
 
     subject.next({ event: 'complete', data: { documentId: 'doc-123' } })
+    expect(info).toHaveBeenCalledWith('Document generated', { documentId: 'doc-123' })
     expect(useNewDocumentStore.getState().generationPhase).toBe('complete')
     expect(useNewDocumentStore.getState().generatedDocumentId).toBe('doc-123')
 
@@ -237,6 +249,7 @@ describe('new-document-store', () => {
     expect(useNewDocumentStore.getState().generationPhase).toBe(PHASE_ANALYZING)
 
     subject.error({ message: 'fail', code: 'ERR' })
+    expect(logError).toHaveBeenCalledWith('Generation stream failed')
     expect(useNewDocumentStore.getState().generationPhase).toBeNull()
   })
 
@@ -250,6 +263,7 @@ describe('new-document-store', () => {
 
     subject.next({ event: 'error', data: { message: 'No valid references found.', code: 'NOT_FOUND' } })
 
+    expect(warn).toHaveBeenCalledWith('Generation error event', { code: 'NOT_FOUND', message: 'No valid references found.' })
     expect(useNewDocumentStore.getState().generationPhase).toBeNull()
     expect(errorSpy).toHaveBeenCalledWith({ message: 'No valid references found.', code: 'NOT_FOUND' })
 

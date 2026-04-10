@@ -1,6 +1,7 @@
 import { filter, prepend, test as rTest, toLower } from 'ramda'
 import { create } from 'zustand'
 import { PHASE_ANALYZING, STATUS_DONE } from '../constants.js'
+import { debug, info, error as logError, warn } from '../logger.js'
 import { fetchGet, fetchPut, fetchSSE, fetchUpload } from '../utils/api.js'
 import { useDialogStore } from './dialog-store.js'
 
@@ -113,6 +114,7 @@ export const useNewDocumentStore = create((set, get) => ({
 
   generateDocument: () => {
     const { selectedReferenceIds, context } = get()
+    info('Document generation started', { referenceCount: selectedReferenceIds.size, contextLength: context.length })
     set({ generationPhase: PHASE_ANALYZING, generatedDocumentId: null, currentStep: 3 })
 
     const subscription = fetchSSE('/v1/documents/generate', {
@@ -121,18 +123,22 @@ export const useNewDocumentStore = create((set, get) => ({
     }).subscribe({
       next: ({ event, data }) => {
         if (event === 'phase') {
+          debug('Generation phase', { phase: data.phase })
           set({ generationPhase: data.phase })
         } else if (event === 'complete') {
+          info('Document generated', { documentId: data.documentId })
           set({
             generationPhase: 'complete',
             generatedDocumentId: data.documentId,
           })
         } else if (event === 'error') {
+          warn('Generation error event', { code: data.code, message: data.message })
           useDialogStore.getState().error(data)
           set({ generationPhase: null })
         }
       },
       error: () => {
+        logError('Generation stream failed')
         set({ generationPhase: null })
       },
       complete: () => {

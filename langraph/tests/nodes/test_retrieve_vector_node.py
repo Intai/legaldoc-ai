@@ -1,9 +1,24 @@
+import functools
 import importlib
 import sys
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 def _make_search_results():
@@ -44,6 +59,9 @@ def retrieve_module(mock_vector_store):
     fake_services = ModuleType("langraph.services")
     fake_services.vector_store = fake_vs_mod
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     sys.modules.pop("langraph.nodes.retrieve_vector_node", None)
 
     with patch.dict(
@@ -51,6 +69,7 @@ def retrieve_module(mock_vector_store):
         {
             "langraph.services": fake_services,
             "langraph.services.vector_store": fake_vs_mod,
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         mod = importlib.import_module("langraph.nodes.retrieve_vector_node")
@@ -122,3 +141,21 @@ class TestRetrieveVectorNodeReturnValue:
         assert first["clause_type"] == "termination"
         assert first["heading"] == "Section 8"
         assert first["score"] == 0.95
+
+
+class TestRetrieveVectorNodeTracing:
+    def test_traced_node_decorator_applied_with_retrieve_vector_name(
+        self, retrieve_module
+    ):
+        assert (
+            retrieve_module.retrieve_vector_node._traced_node_name
+            == "retrieve_vector"
+        )
+
+    async def test_node_returns_correct_result_through_decorator(
+        self, retrieve_module, mock_vector_store
+    ):
+        mock_vector_store.search.return_value = [{"content": "test"}]
+        state = {"query": "test"}
+        result = await retrieve_module.retrieve_vector_node(state)
+        assert result == {"vector_chunks": [{"content": "test"}]}

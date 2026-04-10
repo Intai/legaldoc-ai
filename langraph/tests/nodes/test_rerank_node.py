@@ -1,9 +1,24 @@
+import functools
 import json
 import sys
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 def _make_rerank_result(indices):
@@ -75,6 +90,9 @@ def rerank_module(mock_llm):
     fake_loader_mod = ModuleType("langraph.prompts.loader")
     fake_loader_mod.load_prompt = mock_load_prompt
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     sys.modules.pop("langraph.nodes.rerank_node", None)
 
     with patch.dict(
@@ -84,6 +102,7 @@ def rerank_module(mock_llm):
             "langchain_core.messages": fake_lc_messages,
             "langraph.models.rerank_llm": fake_rerank_llm_mod,
             "langraph.prompts.loader": fake_loader_mod,
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         import importlib
@@ -238,3 +257,15 @@ class TestReranknodeReturnValue:
         assert result == {
             "reranked_chunks": [sample_chunks[0], sample_chunks[1]],
         }
+
+
+class TestRerankNodeTracing:
+    def test_traced_node_decorator_applied_with_rerank_name(self, rerank_module):
+        assert rerank_module.rerank_node._traced_node_name == "rerank"
+
+    async def test_node_returns_correct_result_through_decorator(
+        self, rerank_module, sample_chunks
+    ):
+        state = {"query": "q", "vector_chunks": sample_chunks}
+        result = await rerank_module.rerank_node(state)
+        assert "reranked_chunks" in result

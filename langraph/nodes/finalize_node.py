@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from langraph.models.finalize_llm import finalize_llm
 from langraph.prompts.loader import load_prompt
+from langraph.services.tracing import traced_node
 
 
 class ContentBlock(BaseModel):
@@ -23,6 +24,7 @@ class FinalizeResult(BaseModel):
     description: str
 
 
+@traced_node("finalize")
 async def finalize_node(state: dict) -> dict:
     """Finalize the draft into structured sections with a brief description."""
     phase_callback = state.get("phase_callback")

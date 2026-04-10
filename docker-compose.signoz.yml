@@ -1,0 +1,147 @@
+x-clickhouse-defaults: &clickhouse-defaults
+  restart: on-failure
+  image: clickhouse/clickhouse-server:26.3.5-alpine
+  tty: true
+  depends_on:
+    - zookeeper
+  logging:
+    options:
+      max-size: 50m
+      max-file: "3"
+  healthcheck:
+    test:
+      [
+        "CMD",
+        "wget",
+        "--spider",
+        "-q",
+        "0.0.0.0:8123/ping",
+      ]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 262144
+      hard: 262144
+
+x-db-depend: &db-depend
+  depends_on:
+    clickhouse:
+      condition: service_healthy
+    signoz-telemetrystore-migrator:
+      condition: service_completed_successfully
+
+services:
+  web:
+    environment:
+      VITE_OTEL_EXPORTER_URL: ${VITE_OTEL_EXPORTER_URL:-http://localhost:4318}
+
+  api:
+    environment:
+      OTEL_EXPORTER_ENDPOINT: ${OTEL_EXPORTER_ENDPOINT:-http://otel-collector:4317}
+
+  zookeeper:
+    image: zookeeper:3.9.5
+    container_name: signoz-zookeeper
+    hostname: zookeeper
+    user: root
+    volumes:
+      - zookeeper_data:/data
+    environment:
+      - ZOO_MY_ID=1
+      - ZOO_4LW_COMMANDS_WHITELIST=*
+      - ZOO_AUTOPURGE_PURGEINTERVAL=1
+
+  clickhouse:
+    <<: *clickhouse-defaults
+    container_name: signoz-clickhouse
+    hostname: clickhouse
+    environment:
+      - CLICKHOUSE_DB=signoz
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+    volumes:
+      - ./signoz/clickhouse-config.xml:/etc/clickhouse-server/config.xml
+      - ./signoz/clickhouse-users.xml:/etc/clickhouse-server/users.xml
+      - ./signoz/custom-function.xml:/etc/clickhouse-server/custom-function.xml
+      - ./signoz/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml
+      - clickhouse_data:/var/lib/clickhouse/
+
+  signoz-telemetrystore-migrator:
+    image: signoz/signoz-otel-collector:v0.144.2
+    container_name: signoz-telemetrystore-migrator
+    environment:
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://default:${CLICKHOUSE_PASSWORD:-}@clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate bootstrap &&
+        /signoz-otel-collector migrate sync up &&
+        /signoz-otel-collector migrate async up
+    restart: on-failure
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+  otel-collector:
+    image: signoz/signoz-otel-collector:v0.144.2
+    container_name: signoz-otel-collector
+    entrypoint:
+      - /bin/sh
+    command:
+      - -c
+      - |
+        /signoz-otel-collector migrate sync check &&
+        /signoz-otel-collector --config=/etc/otel-collector-config.yaml
+    volumes:
+      - ./signoz/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - /proc:/hostfs/proc:ro
+      - /sys:/hostfs/sys:ro
+      - /:/hostfs:ro
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
+      - LOW_CARDINAL_EXCEPTION_GROUPING=false
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://default:${CLICKHOUSE_PASSWORD:-}@clickhouse:9000
+      - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    restart: on-failure
+    <<: *db-depend
+
+  signoz:
+    image: signoz/signoz:v0.118.0
+    container_name: signoz
+    ports:
+      - "3301:8080"
+    volumes:
+      - signoz_data:/var/lib/signoz/
+    environment:
+      - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
+      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://default:${CLICKHOUSE_PASSWORD:-}@clickhouse:9000
+      - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+      - SIGNOZ_TOKENIZER_JWT_SECRET=secret
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--spider",
+          "-q",
+          "localhost:8080/api/v1/health",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    <<: *db-depend
+
+volumes:
+  zookeeper_data:
+  clickhouse_data:
+  signoz_data:

@@ -2,6 +2,13 @@ import { Subject } from 'rxjs'
 import { useDialogStore } from './dialog-store'
 import { useAssistantStore } from './assistant-store'
 import { fetchSSE } from '../utils/api.js'
+import { info, error as logError, warn } from '../logger.js'
+
+jest.mock('../logger.js', () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+}))
 
 jest.mock('../utils/api.js', () => ({
   fetchSSE: jest.fn(),
@@ -19,6 +26,7 @@ const initialState = {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks()
   fetchSSE.mockReset()
   useAssistantStore.setState(initialState)
 })
@@ -62,6 +70,7 @@ describe('assistant-store', () => {
 
     useAssistantStore.getState().submitQuery()
 
+    expect(info).toHaveBeenCalledWith('Query submitted', { queryLength: 10 })
     expect(fetchSSE).toHaveBeenCalledWith('/v1/assistant/query', {
       query: 'test query',
     })
@@ -119,6 +128,7 @@ describe('assistant-store', () => {
     const errorData = { message: 'Query failed.', code: 'QUERY_ERROR' }
     subject.next({ event: 'error', data: errorData })
 
+    expect(warn).toHaveBeenCalledWith('Query error event', { code: 'QUERY_ERROR', message: 'Query failed.' })
     expect(errorSpy).toHaveBeenCalledWith(errorData)
     expect(useAssistantStore.getState().loading).toBe(false)
     expect(useAssistantStore.getState().error).toEqual(errorData)
@@ -137,6 +147,7 @@ describe('assistant-store', () => {
 
     subject.error({ message: 'Network error', code: 'NETWORK_ERROR' })
 
+    expect(logError).toHaveBeenCalledWith('Query stream failed')
     expect(useAssistantStore.getState().loading).toBe(false)
   })
 

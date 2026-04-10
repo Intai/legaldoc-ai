@@ -1,9 +1,24 @@
+import functools
 import importlib
 import sys
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 def _make_extract_result(regulations):
@@ -76,6 +91,9 @@ def retrieve_sparql_module(mock_llm, mock_sparql_store):
     fake_services = ModuleType("langraph.services")
     fake_services.sparql_store = fake_sparql_mod
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     sys.modules.pop("langraph.nodes.retrieve_sparql_node", None)
 
     with patch.dict(
@@ -88,6 +106,7 @@ def retrieve_sparql_module(mock_llm, mock_sparql_store):
             "langraph.prompts.loader": fake_loader_mod,
             "langraph.services": fake_services,
             "langraph.services.sparql_store": fake_sparql_mod,
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         mod = importlib.import_module("langraph.nodes.retrieve_sparql_node")
@@ -219,4 +238,21 @@ class TestRetrieveSparqlNodeWithRegulations:
         state = {"query": "q"}
         result = await retrieve_sparql_module.retrieve_sparql_node(state)
         mock_sparql_store.search.assert_called_once_with("", [], [])
+        assert result == {"sparql_chunks": []}
+
+
+class TestRetrieveSparqlNodeTracing:
+    def test_traced_node_decorator_applied_with_retrieve_sparql_name(
+        self, retrieve_sparql_module
+    ):
+        assert (
+            retrieve_sparql_module.retrieve_sparql_node._traced_node_name
+            == "retrieve_sparql"
+        )
+
+    async def test_node_returns_correct_result_through_decorator(
+        self, retrieve_sparql_module
+    ):
+        state = {"query": "test"}
+        result = await retrieve_sparql_module.retrieve_sparql_node(state)
         assert result == {"sparql_chunks": []}

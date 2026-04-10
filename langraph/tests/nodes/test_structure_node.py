@@ -1,9 +1,24 @@
 import asyncio
+import functools
 import sys
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 @pytest.fixture()
@@ -37,6 +52,9 @@ def structure_module(mock_llm, mock_load_prompt):
     fake_loader_mod = ModuleType("langraph.prompts.loader")
     fake_loader_mod.load_prompt = mock_load_prompt
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     sys.modules.pop("langraph.nodes.structure_node", None)
 
     with patch.dict(
@@ -46,6 +64,7 @@ def structure_module(mock_llm, mock_load_prompt):
             "langchain_core.messages": fake_lc_messages,
             "langraph.models.structure_llm": fake_structure_llm_mod,
             "langraph.prompts.loader": fake_loader_mod,
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         import importlib
@@ -159,3 +178,20 @@ class TestStructureNodeLlmInvocation:
         messages = mock_llm.ainvoke.call_args[0][0]
         assert len(messages) == 1
         assert messages[0].__class__.__name__ == "FakeHumanMessage"
+
+
+class TestStructureNodeTracing:
+    def test_traced_node_decorator_applied_with_structure_name(
+        self, structure_module
+    ):
+        assert structure_module.structure_node._traced_node_name == "structure"
+
+    async def test_node_returns_correct_result_through_decorator(
+        self, structure_module, mock_llm
+    ):
+        mock_response = MagicMock()
+        mock_response.content = "outline text"
+        mock_llm.ainvoke.return_value = mock_response
+        state = {"analysis": "analysis", "context": "context"}
+        result = await structure_module.structure_node(state)
+        assert result == {"outline": "outline text"}

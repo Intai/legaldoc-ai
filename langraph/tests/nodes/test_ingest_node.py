@@ -1,10 +1,25 @@
 import asyncio
+import functools
 import json
 import sys
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 def _make_clause(clause_type, heading, content):
@@ -87,6 +102,9 @@ def ingest_module(mock_llm, mock_upsert):
     fake_services_pkg = ModuleType("langraph.services")
     fake_services_pkg.vector_store = fake_vector_store_mod
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     sys.modules.pop("langraph.nodes.ingest_node", None)
 
     with patch.dict(
@@ -98,6 +116,7 @@ def ingest_module(mock_llm, mock_upsert):
             "langraph.prompts.loader": fake_loader_mod,
             "langraph.services": fake_services_pkg,
             "langraph.services.vector_store": fake_vector_store_mod,
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         import importlib
@@ -229,5 +248,16 @@ class TestIngestNodeChunkBuilding:
 
 class TestIngestNodeReturnValue:
     async def test_returns_empty_dict(self, ingest_module, base_state):
+        result = await ingest_module.ingest_node(base_state)
+        assert result == {}
+
+
+class TestIngestNodeTracing:
+    def test_traced_node_decorator_applied_with_ingest_name(self, ingest_module):
+        assert ingest_module.ingest_node._traced_node_name == "ingest"
+
+    async def test_node_returns_correct_result_through_decorator(
+        self, ingest_module, base_state
+    ):
         result = await ingest_module.ingest_node(base_state)
         assert result == {}

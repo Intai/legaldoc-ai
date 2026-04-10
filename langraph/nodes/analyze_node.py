@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from langraph.models.analyze_llm import analyze_llm
 from langraph.models.llm_factory import create_pdf_content
 from langraph.prompts.loader import load_prompt
+from langraph.services.tracing import traced_node
 
 
 class AnalysisResult(BaseModel):
@@ -14,6 +15,7 @@ class AnalysisResult(BaseModel):
     doc_type: Literal["Contract", "Policy", "Employment", "NDA"]
 
 
+@traced_node("analyze")
 async def analyze_node(state: dict) -> dict:
     """Analyze reference documents and context to produce a structured analysis."""
     phase_callback = state.get("phase_callback")

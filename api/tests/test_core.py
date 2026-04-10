@@ -19,6 +19,10 @@ class TestSettings:
         assert settings.mongodb_db_name == "legaldoc_ai"
         assert settings.mongodb_host == "mongodb"
         assert settings.mongodb_port == 27017
+        assert settings.otel_exporter_endpoint == ""
+        assert settings.clickhouse_host == "clickhouse"
+        assert settings.clickhouse_port == 8123
+        assert settings.clickhouse_password == ""
 
     def test_mongodb_uri(self):
         """Settings should build the MongoDB URI from its components."""

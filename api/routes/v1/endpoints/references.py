@@ -1,6 +1,7 @@
 """Reference API endpoints."""
 
 import io
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Query, UploadFile
@@ -15,6 +16,8 @@ from api.schemas.reference import (
     ReferenceListResponse,
     ReferenceResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/references", tags=["references"])
 
@@ -63,6 +66,7 @@ async def list_references(
         )
 
     except Exception as exc:
+        logger.exception("Failed to list references")
         return ReferenceListResponse(
             error=ErrorDetail(
                 message=str(exc),
@@ -97,6 +101,7 @@ async def create_reference(file: UploadFile) -> ReferenceCreateResponse:
     ext = Path(filename).suffix.lower()
 
     if ext not in SUPPORTED_EXTENSIONS:
+        logger.warning("Unsupported file type: %s", ext)
         return ReferenceCreateResponse(
             error=ErrorDetail(
                 message=(
@@ -111,6 +116,7 @@ async def create_reference(file: UploadFile) -> ReferenceCreateResponse:
     content = await file.read()
 
     if len(content) > MAX_FILE_SIZE:
+        logger.warning("File size exceeds limit: %d bytes", len(content))
         return ReferenceCreateResponse(
             error=ErrorDetail(
                 message="File size exceeds the 10 MB limit.",
@@ -119,6 +125,7 @@ async def create_reference(file: UploadFile) -> ReferenceCreateResponse:
         )
 
     if ext == ".pdf" and content[:4] != b"%PDF":
+        logger.warning("Invalid PDF content for file: %s", filename)
         return ReferenceCreateResponse(
             error=ErrorDetail(
                 message="File does not appear to be a valid PDF.",
@@ -132,6 +139,7 @@ async def create_reference(file: UploadFile) -> ReferenceCreateResponse:
         else:
             text = content.decode("utf-8")
     except Exception as exc:
+        logger.exception("Failed to extract text from file")
         return ReferenceCreateResponse(
             error=ErrorDetail(
                 message=f"Failed to extract text: {exc}",

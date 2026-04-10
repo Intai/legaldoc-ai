@@ -2,11 +2,14 @@
 
 import asyncio
 import json
+import logging
 
 from fastapi import APIRouter
 from sse_starlette.sse import EventSourceResponse
 
 from api.schemas.assistant import AssistantQueryRequest
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
@@ -36,6 +39,7 @@ async def _query_events(request: AssistantQueryRequest):
             except Exception as exc:
                 await queue.put(("error", exc))
 
+        logger.info("Assistant query started")
         task = asyncio.create_task(run_graph())
 
         while True:
@@ -63,6 +67,7 @@ async def _query_events(request: AssistantQueryRequest):
         await task
 
     except Exception as exc:
+        logger.exception("Assistant query failed")
         yield {
             "event": "error",
             "data": json.dumps({

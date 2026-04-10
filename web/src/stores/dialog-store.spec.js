@@ -1,7 +1,13 @@
 import { renderHook } from '@testing-library/react'
 import { useDialog, useDialogStore } from './dialog-store'
+import { error as logError } from '../logger.js'
+
+jest.mock('../logger.js', () => ({
+  error: jest.fn(),
+}))
 
 beforeEach(() => {
+  jest.clearAllMocks()
   useDialogStore.setState({ stack: [] })
 })
 
@@ -23,6 +29,9 @@ describe('dialog-store', () => {
       variant: 'error',
       title: 'Something went wrong',
       description: 'Document not found',
+    })
+    expect(logError).toHaveBeenCalledWith('Dialog error', {
+      code: 'NOT_FOUND', message: 'Document not found',
     })
   })
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import i18n from '../i18n'
+import { error as logError } from '../logger.js'
 
 const initialState = {
   stack: [],
@@ -22,8 +23,9 @@ const initialState = {
 export const useDialogStore = create(set => ({
   ...initialState,
 
-  error: apiError =>
-    set(state => ({
+  error: apiError => {
+    logError('Dialog error', { code: apiError?.code, message: apiError?.message })
+    return set(state => ({
       stack: [
         ...state.stack,
         {
@@ -32,7 +34,8 @@ export const useDialogStore = create(set => ({
           description: apiError?.message || i18n.t('error.dialogDescription'),
         },
       ],
-    })),
+    }))
+  },
 
   close: () => set(state => ({ stack: state.stack.slice(0, -1) })),
 }))

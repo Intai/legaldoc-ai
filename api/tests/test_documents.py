@@ -481,13 +481,17 @@ class TestListDocuments:
 
     @pytest.mark.asyncio
     async def test_invalid_cursor(self, client):
-        """Test that an invalid cursor returns an error response."""
-        resp = await client.get("/api/v1/documents?cursor=not-a-valid-cursor")
+        """Test that an invalid cursor returns an error response and logs a warning."""
+        with patch(
+            "api.routes.v1.endpoints.documents.logger",
+        ) as mock_logger:
+            resp = await client.get("/api/v1/documents?cursor=not-a-valid-cursor")
 
         assert resp.status_code == 200
         body = resp.json()
         assert body["data"] is None
         assert body["error"]["code"] == "INVALID_CURSOR"
+        mock_logger.warning.assert_called_once_with("Invalid cursor value received")
 
     @pytest.mark.asyncio
     async def test_malformed_cursor_payload(self, client):
@@ -553,12 +557,17 @@ class TestGetDocument:
 
     @pytest.mark.asyncio
     async def test_returns_404_when_not_found(self, client):
-        """Test that a missing document returns a NOT_FOUND error."""
-        with patch.object(
-            DocumentModel,
-            "get",
-            new_callable=AsyncMock,
-            return_value=None,
+        """Test that a missing document returns a NOT_FOUND error and logs a warning."""
+        with (
+            patch.object(
+                DocumentModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.logger",
+            ) as mock_logger,
         ):
             resp = await client.get("/api/v1/documents/507f1f77bcf86cd799439011")
 
@@ -567,6 +576,9 @@ class TestGetDocument:
         assert body["data"] is None
         assert body["error"]["code"] == "NOT_FOUND"
         assert body["error"]["message"] == "Document not found."
+        mock_logger.warning.assert_called_once_with(
+            "Document not found: %s", "507f1f77bcf86cd799439011"
+        )
 
     @pytest.mark.asyncio
     async def test_returns_error_for_invalid_id(self, client):
@@ -645,12 +657,17 @@ class TestUpdateDocumentStatus:
 
     @pytest.mark.asyncio
     async def test_returns_404_when_not_found(self, client):
-        """Test that updating a missing document returns a NOT_FOUND error."""
+        """Test that updating a missing document returns NOT_FOUND and warns."""
         mock_collection = MagicMock()
         mock_collection.find_one_and_update = AsyncMock(return_value=None)
 
-        with patch.object(
-            DocumentModel, "get_motor_collection", return_value=mock_collection
+        with (
+            patch.object(
+                DocumentModel, "get_motor_collection", return_value=mock_collection
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.logger",
+            ) as mock_logger,
         ):
             resp = await client.put(
                 "/api/v1/documents/507f1f77bcf86cd799439011/status",
@@ -662,6 +679,9 @@ class TestUpdateDocumentStatus:
         assert body["data"] is None
         assert body["error"]["code"] == "NOT_FOUND"
         assert body["error"]["message"] == "Document not found."
+        mock_logger.warning.assert_called_once_with(
+            "Document not found: %s", "507f1f77bcf86cd799439011"
+        )
 
     @pytest.mark.asyncio
     async def test_returns_error_for_invalid_id(self, client):
@@ -734,12 +754,17 @@ class TestGetDocumentPdf:
 
     @pytest.mark.asyncio
     async def test_returns_404_when_document_not_found(self, client):
-        """Test that a missing document returns a 404 error envelope."""
-        with patch.object(
-            DocumentModel,
-            "get",
-            new_callable=AsyncMock,
-            return_value=None,
+        """Test that a missing document returns a 404 error and warns."""
+        with (
+            patch.object(
+                DocumentModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.logger",
+            ) as mock_logger,
         ):
             resp = await client.get("/api/v1/documents/507f1f77bcf86cd799439011/pdf")
 
@@ -748,6 +773,9 @@ class TestGetDocumentPdf:
         assert body["data"] is None
         assert body["error"]["code"] == "NOT_FOUND"
         assert body["error"]["message"] == "Document not found."
+        mock_logger.warning.assert_called_once_with(
+            "Document not found: %s", "507f1f77bcf86cd799439011"
+        )
 
     @pytest.mark.asyncio
     async def test_returns_404_when_no_pdf_content(self, client):
@@ -905,6 +933,9 @@ class TestGenerateDocument:
                 "api.routes.v1.endpoints.documents.build_pdf",
                 return_value=(b"%PDF-fake", 2),
             ),
+            patch(
+                "api.routes.v1.endpoints.documents.logger",
+            ) as mock_logger,
         ):
             MockDocCls.return_value = mock_doc
             MockDocCls.return_value.insert = AsyncMock(return_value=None)
@@ -931,6 +962,13 @@ class TestGenerateDocument:
         assert len(complete_events) == 1
         complete_data = json.loads(complete_events[0]["data"])
         assert "documentId" in complete_data
+        mock_logger.info.assert_any_call("Document generation started")
+        # document_id is a pre-generated ObjectId, not the mock doc's id
+        info_calls = [
+            c for c in mock_logger.info.call_args_list
+            if c[0][0] == "Document created: %s"
+        ]
+        assert len(info_calls) == 1
 
     @pytest.mark.asyncio
     async def test_creates_document_from_graph_result(self, client):
@@ -1063,12 +1101,17 @@ class TestGenerateDocument:
 
     @pytest.mark.asyncio
     async def test_returns_error_when_no_valid_references(self, client):
-        """Test that an error event is emitted when no references are found."""
-        with patch.object(
-            ReferenceModel,
-            "get",
-            new_callable=AsyncMock,
-            return_value=None,
+        """Test that an error event is emitted and warned when no refs found."""
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.logger",
+            ) as mock_logger,
         ):
             resp = await client.post(
                 "/api/v1/documents/generate",
@@ -1084,6 +1127,10 @@ class TestGenerateDocument:
         assert len(error_events) == 1
         error_data = json.loads(error_events[0]["data"])
         assert error_data["code"] == "NOT_FOUND"
+        mock_logger.warning.assert_called_once_with(
+            "No valid references found for IDs: %s",
+            ["607f1f77bcf86cd799439011"],
+        )
 
     @pytest.mark.asyncio
     async def test_returns_error_on_reference_lookup_exception(self, client):
@@ -1195,13 +1242,11 @@ class TestGenerateDocument:
                 return_value=(b"%PDF-fake", 1),
             ),
             patch(
-                "api.routes.v1.endpoints.documents.logging",
-            ) as mock_logging,
+                "api.routes.v1.endpoints.documents.logger",
+            ) as mock_logger,
         ):
             MockDocCls.return_value = mock_doc
             MockDocCls.return_value.insert = AsyncMock(return_value=None)
-            mock_logger = MagicMock()
-            mock_logging.getLogger.return_value = mock_logger
 
             resp = await client.post(
                 "/api/v1/documents/generate",

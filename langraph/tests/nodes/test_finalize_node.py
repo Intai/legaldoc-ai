@@ -1,10 +1,25 @@
 import asyncio
+import functools
 import importlib
 import sys
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 def _make_human_message_class():
@@ -65,6 +80,9 @@ def finalize_module(langchain_core_mock, mock_llm):
     fake_finalize_llm_mod = ModuleType("langraph.models.finalize_llm")
     fake_finalize_llm_mod.finalize_llm = mock_llm
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     sys.modules.pop("langraph.nodes.finalize_node", None)
 
     with patch.dict(
@@ -73,6 +91,7 @@ def finalize_module(langchain_core_mock, mock_llm):
             "langchain_core": core_mod,
             "langchain_core.messages": messages_mod,
             "langraph.models.finalize_llm": fake_finalize_llm_mod,
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ), patch(
         "langraph.prompts.loader.load_prompt", return_value="Finalize prompt"
@@ -186,3 +205,16 @@ class TestFinalizeNodeReturnValue:
             ],
             "description": "A brief summary.",
         }
+
+
+class TestFinalizeNodeTracing:
+    def test_traced_node_decorator_applied_with_finalize_name(self, finalize_module):
+        assert finalize_module.finalize_node._traced_node_name == "finalize"
+
+    async def test_node_returns_correct_result_through_decorator(
+        self, finalize_module
+    ):
+        state = {"draft": "d", "title": "t"}
+        result = await finalize_module.finalize_node(state)
+        assert "sections" in result
+        assert "description" in result

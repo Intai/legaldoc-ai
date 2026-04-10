@@ -13,6 +13,8 @@ from api.db.seed import (  # noqa: E402
     LEGAL_CONTENT,
     SAMPLE_DOCUMENTS,
     SAMPLE_REFERENCES,
+    SIGNOZ_DATABASES,
+    clear_clickhouse,
     generate_pdf,
     seed,
 )
@@ -147,6 +149,7 @@ class TestSeedFunction:
     """Validate the seed function orchestration."""
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.clear_clickhouse")
     @patch("api.db.seed.vector_store")
     @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
@@ -159,6 +162,7 @@ class TestSeedFunction:
         mock_doc_model,
         mock_ref_model,
         mock_vector_store,
+        _mock_clear_clickhouse,
     ):
         """Seed should delete existing documents and insert sample ones."""
         mock_doc_delete = AsyncMock()
@@ -182,6 +186,7 @@ class TestSeedFunction:
         assert len(inserted_docs) == len(SAMPLE_DOCUMENTS)
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.clear_clickhouse")
     @patch("api.db.seed.vector_store")
     @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
@@ -194,6 +199,7 @@ class TestSeedFunction:
         mock_doc_model,
         mock_ref_model,
         mock_vector_store,
+        _mock_clear_clickhouse,
     ):
         """Seed should delete existing references and insert sample ones."""
         mock_doc_delete = AsyncMock()
@@ -217,6 +223,7 @@ class TestSeedFunction:
         assert len(inserted_refs) == len(SAMPLE_REFERENCES)
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.clear_clickhouse")
     @patch("api.db.seed.vector_store")
     @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
@@ -229,6 +236,7 @@ class TestSeedFunction:
         mock_doc_model,
         mock_ref_model,
         mock_vector_store,
+        _mock_clear_clickhouse,
     ):
         """Seed should initialise Beanie with DocumentModel and ReferenceModel."""
         mock_doc_delete = AsyncMock()
@@ -248,6 +256,7 @@ class TestSeedFunction:
         mock_init_beanie.assert_awaited_once()
 
     @pytest.mark.asyncio
+    @patch("api.db.seed.clear_clickhouse")
     @patch("api.db.seed.vector_store")
     @patch("api.db.seed.ReferenceModel")
     @patch("api.db.seed.DocumentModel")
@@ -260,6 +269,7 @@ class TestSeedFunction:
         mock_doc_model,
         mock_ref_model,
         mock_vector_store,
+        _mock_clear_clickhouse,
     ):
         """Seed should clear the Qdrant vector store collection."""
         mock_doc_delete = AsyncMock()
@@ -277,3 +287,44 @@ class TestSeedFunction:
         await seed()
 
         mock_vector_store.clear_collection.assert_called_once()
+
+
+class TestClearClickhouse:
+    """Validate the ClickHouse telemetry cleanup."""
+
+    @patch("api.db.seed.clickhouse_connect")
+    def test_truncates_all_tables_in_signoz_databases(self, mock_ch):
+        """clear_clickhouse should truncate every table in each SigNoz database."""
+        mock_client = MagicMock()
+        mock_ch.get_client.return_value = mock_client
+        mock_client.query.return_value.result_rows = [
+            ("spans",),
+            ("traces",),
+        ]
+
+        settings = MagicMock()
+        settings.clickhouse_host = "clickhouse"
+        settings.clickhouse_port = 8123
+        settings.clickhouse_password = ""
+
+        clear_clickhouse(settings)
+
+        assert mock_client.query.call_count == len(SIGNOZ_DATABASES)
+        assert mock_client.command.call_count == len(SIGNOZ_DATABASES) * 2
+
+        for db in SIGNOZ_DATABASES:
+            mock_client.query.assert_any_call(f"SHOW TABLES FROM {db}")
+            mock_client.command.assert_any_call(f"TRUNCATE TABLE {db}.spans")
+            mock_client.command.assert_any_call(f"TRUNCATE TABLE {db}.traces")
+
+    @patch("api.db.seed.clickhouse_connect")
+    def test_skips_gracefully_when_clickhouse_unavailable(self, mock_ch):
+        """clear_clickhouse should not raise when ClickHouse is unreachable."""
+        mock_ch.get_client.side_effect = Exception("Connection refused")
+
+        settings = MagicMock()
+        settings.clickhouse_host = "clickhouse"
+        settings.clickhouse_port = 8123
+        settings.clickhouse_password = ""
+
+        clear_clickhouse(settings)  # Should not raise

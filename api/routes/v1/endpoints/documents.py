@@ -28,6 +28,8 @@ from api.schemas.document import (
     UpdateDocumentStatusRequest,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
@@ -106,6 +108,7 @@ async def list_documents(
                 cursor_data = _decode_cursor(cursor)
                 cursor_id = PydanticObjectId(cursor_data["_id"])
             except Exception:
+                logger.warning("Invalid cursor value received")
                 return DocumentListResponse(
                     error=ErrorDetail(
                         message="Invalid cursor value.",
@@ -149,6 +152,7 @@ async def list_documents(
         )
 
     except Exception as exc:
+        logger.exception("Failed to list documents")
         return DocumentListResponse(
             error=ErrorDetail(
                 message=str(exc),
@@ -177,6 +181,7 @@ async def get_document(id: str) -> DocumentDetailResponse:
     try:
         doc = await DocumentModel.get(doc_id)
     except Exception as exc:
+        logger.exception("Failed to fetch document")
         return DocumentDetailResponse(
             error=ErrorDetail(
                 message=str(exc),
@@ -185,6 +190,7 @@ async def get_document(id: str) -> DocumentDetailResponse:
         )
 
     if doc is None:
+        logger.warning("Document not found: %s", id)
         return DocumentDetailResponse(
             error=ErrorDetail(
                 message="Document not found.",
@@ -223,6 +229,7 @@ async def update_document_status(
             return_document=ReturnDocument.AFTER,
         )
     except Exception as exc:
+        logger.exception("Failed to update document status")
         return DocumentDetailResponse(
             error=ErrorDetail(
                 message=str(exc),
@@ -231,6 +238,7 @@ async def update_document_status(
         )
 
     if raw is None:
+        logger.warning("Document not found: %s", id)
         return DocumentDetailResponse(
             error=ErrorDetail(
                 message="Document not found.",
@@ -264,6 +272,7 @@ async def get_document_pdf(id: str) -> Response | DocumentDetailResponse:
     doc = await DocumentModel.get(doc_id)
 
     if doc is None:
+        logger.warning("Document not found: %s", id)
         return DocumentDetailResponse(
             error=ErrorDetail(
                 message="Document not found.",
@@ -420,8 +429,6 @@ async def _generate_events(request: GenerateDocumentRequest):
     """
     from langraph.app.graph import build_graph
 
-    logger = logging.getLogger(__name__)
-
     try:
         # Look up references
         ref_ids = [PydanticObjectId(rid) for rid in request.reference_ids]
@@ -432,6 +439,10 @@ async def _generate_events(request: GenerateDocumentRequest):
                 references.append(ref)
 
         if not references:
+            logger.warning(
+                "No valid references found for IDs: %s",
+                request.reference_ids,
+            )
             yield {
                 "event": "error",
                 "data": json.dumps({
@@ -454,6 +465,8 @@ async def _generate_events(request: GenerateDocumentRequest):
             "document_id": str(document_id),
             "phase_callback": queue,
         }
+
+        logger.info("Document generation started")
 
         # Compile and run graph in background
         graph = build_graph()
@@ -489,6 +502,7 @@ async def _generate_events(request: GenerateDocumentRequest):
                     pdf_content=pdf_bytes,
                 )
                 await doc.insert()
+                logger.info("Document created: %s", document_id)
                 yield {
                     "event": "complete",
                     "data": json.dumps({"documentId": str(document_id)}),
@@ -501,6 +515,7 @@ async def _generate_events(request: GenerateDocumentRequest):
                 yield {"event": "phase", "data": json.dumps({"phase": event})}
 
     except Exception as exc:
+        logger.exception("Document generation failed")
         yield {
             "event": "error",
             "data": json.dumps({

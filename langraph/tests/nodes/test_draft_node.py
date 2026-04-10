@@ -1,7 +1,23 @@
 import asyncio
+import functools
 import importlib
 import sys
+from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
+
+
+def _passthrough_traced_node(name):
+    """A no-op traced_node decorator for testing."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(state):
+            return await fn(state)
+
+        wrapper._traced_node_name = name
+        return wrapper
+
+    return decorator
 
 
 def _import_draft_node(mock_llm, mock_loader):
@@ -13,6 +29,9 @@ def _import_draft_node(mock_llm, mock_loader):
     mock_langchain_core = MagicMock()
     mock_langchain_core.messages = mock_messages
 
+    fake_tracing_mod = ModuleType("langraph.services.tracing")
+    fake_tracing_mod.traced_node = _passthrough_traced_node
+
     with patch.dict(
         sys.modules,
         {
@@ -20,6 +39,7 @@ def _import_draft_node(mock_llm, mock_loader):
             "langchain_core.messages": mock_messages,
             "langraph.models.draft_llm": MagicMock(draft_llm=mock_llm),
             "langraph.prompts.loader": MagicMock(load_prompt=mock_loader),
+            "langraph.services.tracing": fake_tracing_mod,
         },
     ):
         mod = importlib.import_module("langraph.nodes.draft_node")
@@ -153,3 +173,21 @@ class TestDraftNodeReturnValue:
         result = await mod.draft_node(state)
 
         assert result == {"draft": "final draft text"}
+
+
+class TestDraftNodeTracing:
+    def test_traced_node_decorator_applied_with_draft_name(self):
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="text"))
+        mock_loader = MagicMock(return_value="p")
+        mod = _import_draft_node(mock_llm, mock_loader)
+        assert mod.draft_node._traced_node_name == "draft"
+
+    async def test_node_returns_correct_result_through_decorator(self):
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="draft"))
+        mock_loader = MagicMock(return_value="p")
+        mod = _import_draft_node(mock_llm, mock_loader)
+        state = {"outline": "outline", "analysis": "analysis"}
+        result = await mod.draft_node(state)
+        assert result == {"draft": "draft"}

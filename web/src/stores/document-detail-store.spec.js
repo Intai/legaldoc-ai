@@ -1,5 +1,10 @@
 import { useDocumentDetailStore } from './document-detail-store'
 import { fetchGet, fetchPut } from '../utils/api.js'
+import { error as logError } from '../logger.js'
+
+jest.mock('../logger.js', () => ({
+  error: jest.fn(),
+}))
 
 jest.mock('../utils/api.js', () => ({
   fetchGet: jest.fn(),
@@ -28,6 +33,7 @@ const mockConfirmedDocument = {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks()
   fetchGet.mockReset()
   fetchPut.mockReset()
   useDocumentDetailStore.setState({
@@ -123,6 +129,7 @@ describe('document-detail-store', () => {
     const result = await useDocumentDetailStore.getState().confirmDraft('doc-1')
 
     expect(result).toBe(false)
+    expect(logError).toHaveBeenCalledWith('Draft confirmation failed', { documentId: 'doc-1' })
     expect(useDocumentDetailStore.getState().saving).toBe(false)
   })
 

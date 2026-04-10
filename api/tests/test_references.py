@@ -210,17 +210,23 @@ class TestCreateReference:
 
     @pytest.mark.asyncio
     async def test_rejects_unsupported_file_type(self, client):
-        """Test that uploading a non-PDF/TXT file returns UNSUPPORTED_FILE_TYPE."""
-        resp = await client.post(
-            "/api/v1/references",
-            files={"file": ("image.png", b"fake-png", "image/png")},
-        )
+        """Test that uploading a non-PDF/TXT file returns error and logs a warning."""
+        with patch(
+            "api.routes.v1.endpoints.references.logger",
+        ) as mock_logger:
+            resp = await client.post(
+                "/api/v1/references",
+                files={"file": ("image.png", b"fake-png", "image/png")},
+            )
 
         assert resp.status_code == 201
         body = resp.json()
         assert body["data"] is None
         assert body["error"]["code"] == "UNSUPPORTED_FILE_TYPE"
         assert ".png" in body["error"]["message"]
+        mock_logger.warning.assert_called_once_with(
+            "Unsupported file type: %s", ".png"
+        )
 
     @pytest.mark.asyncio
     async def test_truncates_description_to_200_chars(self, client):
@@ -250,23 +256,34 @@ class TestCreateReference:
 
     @pytest.mark.asyncio
     async def test_rejects_pdf_with_invalid_magic_bytes(self, client):
-        """Test that a file with .pdf extension but invalid content is rejected."""
-        resp = await client.post(
-            "/api/v1/references",
-            files={"file": ("broken.pdf", b"not-a-pdf", "application/pdf")},
-        )
+        """Test that a file with invalid content is rejected and logs a warning."""
+        with patch(
+            "api.routes.v1.endpoints.references.logger",
+        ) as mock_logger:
+            resp = await client.post(
+                "/api/v1/references",
+                files={"file": ("broken.pdf", b"not-a-pdf", "application/pdf")},
+            )
 
         assert resp.status_code == 201
         body = resp.json()
         assert body["data"] is None
         assert body["error"]["code"] == "INVALID_FILE_CONTENT"
+        mock_logger.warning.assert_called_once_with(
+            "Invalid PDF content for file: %s", "broken.pdf"
+        )
 
     @pytest.mark.asyncio
     async def test_rejects_file_exceeding_size_limit(self, client):
-        """Test that a file larger than 10 MB is rejected."""
-        with patch(
-            "api.routes.v1.endpoints.references.MAX_FILE_SIZE",
-            1,
+        """Test that a file larger than limit is rejected and logs a warning."""
+        with (
+            patch(
+                "api.routes.v1.endpoints.references.MAX_FILE_SIZE",
+                1,
+            ),
+            patch(
+                "api.routes.v1.endpoints.references.logger",
+            ) as mock_logger,
         ):
             resp = await client.post(
                 "/api/v1/references",
@@ -277,6 +294,9 @@ class TestCreateReference:
         body = resp.json()
         assert body["data"] is None
         assert body["error"]["code"] == "FILE_TOO_LARGE"
+        mock_logger.warning.assert_called_once_with(
+            "File size exceeds limit: %d bytes", len(b"%PDF-large")
+        )
 
     @pytest.mark.asyncio
     async def test_handles_extraction_error(self, client):

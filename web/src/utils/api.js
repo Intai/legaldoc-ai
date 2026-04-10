@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs'
 import config from '../config/index.js'
+import { debug, error, warn } from '../logger.js'
 import { useDialogStore } from '../stores/dialog-store.js'
 
 /**
@@ -19,15 +20,17 @@ export async function fetchGet(path, params = {}) {
     const body = await response.json()
 
     if (body.error) {
+      warn('API error', { method: 'GET', path, code: body.error.code, message: body.error.message })
       useDialogStore.getState().error(body.error)
       return { data: null, error: body.error }
     }
 
     return { data: body.data, error: null }
   } catch (err) {
-    const error = { message: err.message, code: 'NETWORK_ERROR' }
-    useDialogStore.getState().error(error)
-    return { data: null, error }
+    error('Network error', { method: 'GET', path, message: err.message })
+    const networkError = { message: err.message, code: 'NETWORK_ERROR' }
+    useDialogStore.getState().error(networkError)
+    return { data: null, error: networkError }
   }
 }
 
@@ -49,15 +52,17 @@ export async function fetchPost(path, data) {
     const body = await response.json()
 
     if (body.error) {
+      warn('API error', { method: 'POST', path, code: body.error.code, message: body.error.message })
       useDialogStore.getState().error(body.error)
       return { data: null, error: body.error }
     }
 
     return { data: body.data, error: null }
   } catch (err) {
-    const error = { message: err.message, code: 'NETWORK_ERROR' }
-    useDialogStore.getState().error(error)
-    return { data: null, error }
+    error('Network error', { method: 'POST', path, message: err.message })
+    const networkError = { message: err.message, code: 'NETWORK_ERROR' }
+    useDialogStore.getState().error(networkError)
+    return { data: null, error: networkError }
   }
 }
 
@@ -79,15 +84,17 @@ export async function fetchUpload(path, formData) {
     const body = await response.json()
 
     if (body.error) {
+      warn('API error', { method: 'POST', path, code: body.error.code, message: body.error.message })
       useDialogStore.getState().error(body.error)
       return { data: null, error: body.error }
     }
 
     return { data: body.data, error: null }
   } catch (err) {
-    const error = { message: err.message, code: 'NETWORK_ERROR' }
-    useDialogStore.getState().error(error)
-    return { data: null, error }
+    error('Network error', { method: 'POST', path, message: err.message })
+    const networkError = { message: err.message, code: 'NETWORK_ERROR' }
+    useDialogStore.getState().error(networkError)
+    return { data: null, error: networkError }
   }
 }
 
@@ -109,15 +116,17 @@ export async function fetchPut(path, data) {
     const body = await response.json()
 
     if (body.error) {
+      warn('API error', { method: 'PUT', path, code: body.error.code, message: body.error.message })
       useDialogStore.getState().error(body.error)
       return { data: null, error: body.error }
     }
 
     return { data: body.data, error: null }
   } catch (err) {
-    const error = { message: err.message, code: 'NETWORK_ERROR' }
-    useDialogStore.getState().error(error)
-    return { data: null, error }
+    error('Network error', { method: 'PUT', path, message: err.message })
+    const networkError = { message: err.message, code: 'NETWORK_ERROR' }
+    useDialogStore.getState().error(networkError)
+    return { data: null, error: networkError }
   }
 }
 
@@ -179,12 +188,14 @@ export function fetchSSE(path, data) {
       })
       .catch(err => {
         if (err.name === 'AbortError') {
+          debug('SSE aborted', { path })
           subscriber.complete()
           return
         }
-        const error = { message: err.message, code: 'NETWORK_ERROR' }
-        useDialogStore.getState().error(error)
-        subscriber.error(error)
+        error('SSE error', { path, message: err.message })
+        const networkError = { message: err.message, code: 'NETWORK_ERROR' }
+        useDialogStore.getState().error(networkError)
+        subscriber.error(networkError)
       })
 
     return () => {

@@ -19,7 +19,6 @@ module.exports = {
   ],
   collectCoverageFrom: [
     '**/*.{js,jsx}',
-    '!src/index.jsx',
     '!**/constants.{js,mjs}',
     '!**/*.config.{js,mjs}',
     '!**/node_modules/**',

@@ -105,9 +105,14 @@ class TestQueryAssistant:
         """Test that query streams token events followed by a complete event."""
         rag_result = _make_rag_result()
 
-        with patch(
-            "langraph.app.rag_graph.build_rag_graph",
-            _mock_build_rag_graph(rag_result),
+        with (
+            patch(
+                "langraph.app.rag_graph.build_rag_graph",
+                _mock_build_rag_graph(rag_result),
+            ),
+            patch(
+                "api.routes.v1.endpoints.assistant.logger",
+            ) as mock_logger,
         ):
             resp = await client.post(
                 "/api/v1/assistant/query",
@@ -128,6 +133,7 @@ class TestQueryAssistant:
         assert len(complete_events) == 1
         complete_data = json.loads(complete_events[0]["data"])
         assert "sources" in complete_data
+        mock_logger.info.assert_called_once_with("Assistant query started")
 
     @pytest.mark.asyncio
     async def test_complete_event_contains_sources_with_correct_keys(self, client):

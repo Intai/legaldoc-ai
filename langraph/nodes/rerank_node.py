@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from langraph.models.rerank_llm import rerank_llm
 from langraph.prompts.loader import load_prompt
+from langraph.services.tracing import traced_node
 
 TOP_K = 5
 
@@ -13,6 +14,7 @@ class RerankResult(BaseModel):
     indices: list[int]
 
 
+@traced_node("rerank")
 async def rerank_node(state: dict) -> dict:
     """Rerank vector chunks by relevance using an LLM and return the top-5."""
     prompt = load_prompt("rerank")

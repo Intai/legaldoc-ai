@@ -18,6 +18,7 @@ dependencies = [
     "qdrant-client",
     "SPARQLWrapper",
     "beautifulsoup4",
+    "opentelemetry-api",
 ]
 
 [project.optional-dependencies]

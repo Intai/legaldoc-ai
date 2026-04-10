@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { STATUS_DONE } from '../constants.js'
+import { error as logError } from '../logger.js'
 import { fetchGet, fetchPut } from '../utils/api.js'
 
 const initialState = {
@@ -54,6 +55,7 @@ export const useDocumentDetailStore = create(set => ({
         saving: false,
       }))
     } else {
+      logError('Draft confirmation failed', { documentId: id })
       set({ saving: false })
     }
 

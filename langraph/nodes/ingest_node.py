@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from langraph.models.parse_llm import parse_llm
 from langraph.prompts.loader import load_prompt
 from langraph.services import vector_store
+from langraph.services.tracing import traced_node
 
 
 class Clause(BaseModel):
@@ -18,6 +19,7 @@ class ParseClausesResult(BaseModel):
     clauses: list[Clause]
 
 
+@traced_node("ingest")
 async def ingest_node(state: dict) -> dict:
     """Extract clause-level chunks from sections and upsert into the vector store."""
     phase_callback = state.get("phase_callback")
