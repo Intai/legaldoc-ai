@@ -8,6 +8,7 @@ import pytest
 sys.modules["langraph"] = MagicMock()
 sys.modules["langraph.services"] = MagicMock()
 sys.modules["langraph.services.vector_store"] = MagicMock()
+sys.modules["clickhouse_connect"] = MagicMock()
 
 from api.db.seed import (  # noqa: E402
     LEGAL_CONTENT,
