@@ -17,12 +17,20 @@ As a developer, I want to add an MCP (Model Context Protocol) server to the exis
 
 ## Tasks
 
-- Use backend-developer subagent to add `mcp[cli]>=1.27` to @api/pyproject.toml dependencies.
-- Use backend-developer subagent to create the FastMCP instance @api/core/mcp.py. Instantiate `FastMCP("legaldoc-ai")` and export it. This module exists solely to break the circular import between endpoint files and `api/main.py`.
-- Use backend-developer subagent to add `mcp_list_references` tool to @api/routes/v1/endpoints/references.py. Import `mcp` from `api.core.mcp`. Extract the query and serialization logic from the `list_references` REST endpoint into a shared helper. Register an `@mcp.tool()` function with optional `type` parameter that calls the shared helper and returns a list of dicts with `id`, `title`, `type`, `description`, `createdAt`.
-- Use backend-developer subagent to add `mcp_list_documents` and `mcp_update_document_status` tools to @api/routes/v1/endpoints/documents.py. Import `mcp` from `api.core.mcp`. For `mcp_list_documents`: extract the query, pagination, and serialization logic from the `list_documents` REST endpoint into a shared helper. Register an `@mcp.tool()` function with `type`, `sort`, `cursor`, and `limit` parameters that calls the shared helper and returns a dict with `documents` (including `pdfUrl` derived from `/api/v1/documents/{id}/pdf`) and `nextCursor`. For `mcp_update_document_status`: register an `@mcp.tool()` function with `document_id` and `status` parameters that reuses the existing `find_one_and_update` logic from the `update_document_status` REST endpoint and returns the updated document dict.
-- Use backend-developer subagent to add `mcp_generate_document` tool to @api/routes/v1/endpoints/documents.py. Register an `@mcp.tool()` function with `reference_ids` and `context` parameters. Consume the existing `_generate_events` async generator, skip phase events, and return the complete event's `documentId`. Raise on error events.
-- Use backend-developer subagent to add `mcp_query_assistant` tool to @api/routes/v1/endpoints/assistant.py. Import `mcp` from `api.core.mcp`. Register an `@mcp.tool()` function with a `query` parameter. Consume the existing `_query_events` async generator, accumulate token texts into the full answer, and return a dict with `answer` and `sources` from the complete event. Raise on error events.
-- Use backend-developer subagent to mount the MCP server into the FastAPI app @api/main.py. Import `mcp` from `api.core.mcp`. Call `app.mount("/mcp", mcp.streamable_http_app())` in `create_app()` before `instrument_app()`.
-- Use backend-developer subagent to add the legaldoc-ai MCP server entry to @.mcp.json. Add `"legaldoc-ai": {"type": "http", "url": "http://localhost:8000/mcp"}` alongside the existing shadcn entry.
-- Use qa-tester subagent to plan BDD scenarios @web/src/documents/docs/mcp.feature.
+**Parallel tasks 1-4:**
+
+1. Use backend-developer subagent to add `mcp[cli]>=1.27` to @api/pyproject.toml dependencies.
+2. Use backend-developer subagent to create the FastMCP instance @api/core/mcp.py. Instantiate `FastMCP("legaldoc-ai")` and export it. This module exists solely to break the circular import between endpoint files and `api/main.py`.
+3. Use backend-developer subagent to add the legaldoc-ai MCP server entry to @.mcp.json. Add `"legaldoc-ai": {"type": "http", "url": "http://localhost:8000/mcp"}` alongside the existing shadcn entry.
+4. Use qa-tester subagent to plan BDD scenarios @web/src/documents/docs/mcp.feature.
+
+**Parallel after task 2 completes:**
+
+5. Use backend-developer subagent to add `mcp_list_references` tool to @api/routes/v1/endpoints/references.py. Import `mcp` from `api.core.mcp`. Extract the query and serialization logic from the `list_references` REST endpoint into a shared helper. Register an `@mcp.tool()` function with optional `type` parameter that calls the shared helper and returns a list of dicts with `id`, `title`, `type`, `description`, `createdAt`.
+6. Use backend-developer subagent to add `mcp_query_assistant` tool to @api/routes/v1/endpoints/assistant.py. Import `mcp` from `api.core.mcp`. Register an `@mcp.tool()` function with a `query` parameter. Consume the existing `_query_events` async generator, accumulate token texts into the full answer, and return a dict with `answer` and `sources` from the complete event. Raise on error events.
+7. Use backend-developer subagent to mount the MCP server into the FastAPI app @api/main.py. Import `mcp` from `api.core.mcp`. Call `app.mount("/mcp", mcp.streamable_http_app())` in `create_app()` before `instrument_app()`.
+
+**Sequential tasks 8-9 after task 2 completes:**
+
+8. Use backend-developer subagent to add `mcp_list_documents` and `mcp_update_document_status` tools to @api/routes/v1/endpoints/documents.py. Import `mcp` from `api.core.mcp`. For `mcp_list_documents`: extract the query, pagination, and serialization logic from the `list_documents` REST endpoint into a shared helper. Register an `@mcp.tool()` function with `type`, `sort`, `cursor`, and `limit` parameters that calls the shared helper and returns a dict with `documents` (including `pdfUrl` derived from `/api/v1/documents/{id}/pdf`) and `nextCursor`. For `mcp_update_document_status`: register an `@mcp.tool()` function with `document_id` and `status` parameters that reuses the existing `find_one_and_update` logic from the `update_document_status` REST endpoint and returns the updated document dict.
+9. Use backend-developer subagent to add `mcp_generate_document` tool to @api/routes/v1/endpoints/documents.py. Register an `@mcp.tool()` function with `reference_ids` and `context` parameters. Consume the existing `_generate_events` async generator, skip phase events, and return the complete event's `documentId`. Raise on error events.
