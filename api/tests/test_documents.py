@@ -14,6 +14,15 @@ from httpx import ASGITransport, AsyncClient
 from api.main import create_app
 from api.models.document import DocumentModel, DocumentStatus, DocumentType
 from api.models.reference import ReferenceModel
+from api.routes.v1.endpoints.documents import (
+    SortOption,
+    _find_and_update_status,
+    _query_documents,
+    _serialize_document_dict,
+    mcp_generate_document,
+    mcp_list_documents,
+    mcp_update_document_status,
+)
 
 # Pre-seed sys.modules with a mock langraph.app.graph to prevent importing
 # the real module (which requires an Anthropic API key).
@@ -1440,3 +1449,399 @@ class TestGenerateDocument:
 
         assert resp.status_code == 200
         mock_build_pdf.assert_called_once_with("Custom Title", sections)
+
+
+class TestSerializeDocumentDict:
+    """Tests for the _serialize_document_dict helper."""
+
+    def test_serializes_beanie_model_with_pdf_url(self):
+        """Test that a Beanie model is serialized to a dict with pdfUrl."""
+        doc = _make_doc(doc_id="507f1f77bcf86cd799439011", title="My NDA")
+        result = _serialize_document_dict(doc)
+
+        assert result["id"] == "507f1f77bcf86cd799439011"
+        assert result["title"] == "My NDA"
+        assert result["pdfUrl"] == "/api/v1/documents/507f1f77bcf86cd799439011/pdf"
+        assert result["createdAt"] is not None
+        assert result["pageCount"] == 3
+
+    def test_serializes_raw_dict_with_pdf_url(self):
+        """Test that a raw MongoDB dict is serialized to a dict with pdfUrl."""
+        raw = _make_raw_doc(doc_id="507f1f77bcf86cd799439011", title="Contract")
+        result = _serialize_document_dict(raw)
+
+        assert result["id"] == "507f1f77bcf86cd799439011"
+        assert result["title"] == "Contract"
+        assert result["pdfUrl"] == "/api/v1/documents/507f1f77bcf86cd799439011/pdf"
+        assert result["status"] == DocumentStatus.DONE
+
+
+class TestQueryDocuments:
+    """Tests for the _query_documents shared helper."""
+
+    @pytest.mark.asyncio
+    async def test_returns_documents_and_next_cursor(self):
+        """Test that documents and nextCursor are returned for paginated results."""
+        ts = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        doc1 = _make_doc(doc_id="507f1f77bcf86cd799439011", created_at=ts)
+        doc2 = _make_doc(doc_id="507f1f77bcf86cd799439012", created_at=ts)
+        extra = _make_doc(doc_id="507f1f77bcf86cd799439013", created_at=ts)
+
+        mock_find, _, _ = _mock_find([doc1, doc2, extra])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find):
+            docs, next_cursor = await _query_documents(SortOption.RECENT, limit=2)
+
+        assert len(docs) == 2
+        assert next_cursor is not None
+
+    @pytest.mark.asyncio
+    async def test_returns_none_cursor_on_last_page(self):
+        """Test that nextCursor is None when there are no more pages."""
+        doc1 = _make_doc(doc_id="507f1f77bcf86cd799439011")
+        mock_find, _, _ = _mock_find([doc1])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find):
+            docs, next_cursor = await _query_documents(SortOption.RECENT, limit=6)
+
+        assert len(docs) == 1
+        assert next_cursor is None
+
+    @pytest.mark.asyncio
+    async def test_raises_value_error_for_invalid_cursor(self):
+        """Test that an invalid cursor raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid cursor value."):
+            await _query_documents(SortOption.RECENT, cursor="not-valid")
+
+    @pytest.mark.asyncio
+    async def test_filters_by_type(self):
+        """Test that a type filter is passed to the database query."""
+        mock_find, _, _ = _mock_find([])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find) as find_call:
+            await _query_documents(SortOption.RECENT, type=DocumentType.NDA)
+
+        call_args = find_call.call_args[0][0]
+        assert call_args["type"] == DocumentType.NDA
+
+
+class TestFindAndUpdateStatus:
+    """Tests for the _find_and_update_status shared helper."""
+
+    @pytest.mark.asyncio
+    async def test_returns_updated_document(self):
+        """Test that a valid update returns the raw MongoDB document."""
+        raw = _make_raw_doc(status=DocumentStatus.DONE)
+        mock_collection = MagicMock()
+        mock_collection.find_one_and_update = AsyncMock(return_value=raw)
+
+        with patch.object(
+            DocumentModel, "get_motor_collection", return_value=mock_collection
+        ):
+            result = await _find_and_update_status(
+                "507f1f77bcf86cd799439011", "Done"
+            )
+
+        assert result is not None
+        assert result["status"] == DocumentStatus.DONE
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_not_found(self):
+        """Test that updating a missing document returns None."""
+        mock_collection = MagicMock()
+        mock_collection.find_one_and_update = AsyncMock(return_value=None)
+
+        with patch.object(
+            DocumentModel, "get_motor_collection", return_value=mock_collection
+        ):
+            result = await _find_and_update_status(
+                "507f1f77bcf86cd799439011", "Done"
+            )
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_raises_value_error_for_invalid_id(self):
+        """Test that an invalid ObjectId raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid document ID."):
+            await _find_and_update_status("not-valid", "Done")
+
+
+class TestMcpListDocuments:
+    """Tests for the mcp_list_documents MCP tool."""
+
+    @pytest.mark.asyncio
+    async def test_returns_documents_with_pdf_url_and_next_cursor(self):
+        """Test that documents include pdfUrl and nextCursor is returned."""
+        ts = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        doc1 = _make_doc(
+            doc_id="507f1f77bcf86cd799439011", title="Doc 1", created_at=ts
+        )
+        doc2 = _make_doc(
+            doc_id="507f1f77bcf86cd799439012", title="Doc 2", created_at=ts
+        )
+        extra = _make_doc(
+            doc_id="507f1f77bcf86cd799439013", title="Doc 3", created_at=ts
+        )
+
+        mock_find, _, _ = _mock_find([doc1, doc2, extra])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find):
+            result = await mcp_list_documents(limit=2)
+
+        assert len(result["documents"]) == 2
+        assert result["nextCursor"] is not None
+        assert result["documents"][0]["pdfUrl"] == (
+            "/api/v1/documents/507f1f77bcf86cd799439011/pdf"
+        )
+
+    @pytest.mark.asyncio
+    async def test_filters_by_type_string(self):
+        """Test that passing a type string filters documents by document type."""
+        mock_find, _, _ = _mock_find([])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find) as find_call:
+            result = await mcp_list_documents(type="NDA")
+
+        call_args = find_call.call_args[0][0]
+        assert call_args["type"] == DocumentType.NDA
+        assert result["documents"] == []
+
+    @pytest.mark.asyncio
+    async def test_sorts_by_alpha(self):
+        """Test that sort=alpha passes +title to the query."""
+        mock_find, _, _ = _mock_find([])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find):
+            result = await mcp_list_documents(sort="alpha")
+
+        mock_find.sort.assert_called_once_with("+title")
+        assert result["documents"] == []
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_documents_when_no_results(self):
+        """Test that an empty collection returns empty documents and null cursor."""
+        mock_find, _, _ = _mock_find([])
+
+        with patch.object(DocumentModel, "find", return_value=mock_find):
+            result = await mcp_list_documents()
+
+        assert result["documents"] == []
+        assert result["nextCursor"] is None
+
+    @pytest.mark.asyncio
+    async def test_passes_cursor_to_query(self):
+        """Test that cursor parameter is forwarded to pagination logic."""
+        mock_find, _, _ = _mock_find([])
+        cursor_val = _make_cursor({
+            "created_at": "2025-01-15T10:00:00+00:00",
+            "_id": "507f1f77bcf86cd799439011",
+        })
+
+        with patch.object(DocumentModel, "find", return_value=mock_find) as find_call:
+            await mcp_list_documents(cursor=cursor_val)
+
+        call_args = find_call.call_args[0][0]
+        assert "$or" in call_args
+
+
+class TestMcpUpdateDocumentStatus:
+    """Tests for the mcp_update_document_status MCP tool."""
+
+    @pytest.mark.asyncio
+    async def test_returns_updated_document_dict(self):
+        """Test that a valid update returns the document with pdfUrl."""
+        raw = _make_raw_doc(
+            doc_id="507f1f77bcf86cd799439011", status=DocumentStatus.DONE
+        )
+        mock_collection = MagicMock()
+        mock_collection.find_one_and_update = AsyncMock(return_value=raw)
+
+        with patch.object(
+            DocumentModel, "get_motor_collection", return_value=mock_collection
+        ):
+            result = await mcp_update_document_status(
+                document_id="507f1f77bcf86cd799439011", status="Done"
+            )
+
+        assert result["id"] == "507f1f77bcf86cd799439011"
+        assert result["status"] == DocumentStatus.DONE
+        assert result["pdfUrl"] == "/api/v1/documents/507f1f77bcf86cd799439011/pdf"
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_not_found(self):
+        """Test that updating a missing document returns an error dict."""
+        mock_collection = MagicMock()
+        mock_collection.find_one_and_update = AsyncMock(return_value=None)
+
+        with patch.object(
+            DocumentModel, "get_motor_collection", return_value=mock_collection
+        ):
+            result = await mcp_update_document_status(
+                document_id="507f1f77bcf86cd799439011", status="Done"
+            )
+
+        assert result == {"error": "Document not found."}
+
+    @pytest.mark.asyncio
+    async def test_raises_on_invalid_document_id(self):
+        """Test that an invalid ObjectId raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid document ID."):
+            await mcp_update_document_status(
+                document_id="not-valid", status="Done"
+            )
+
+    @pytest.mark.asyncio
+    async def test_raises_on_invalid_status(self):
+        """Test that an invalid status value raises ValueError."""
+        with pytest.raises(ValueError):
+            await mcp_update_document_status(
+                document_id="507f1f77bcf86cd799439011", status="InvalidStatus"
+            )
+
+
+class TestMcpGenerateDocument:
+    """Tests for the mcp_generate_document MCP tool."""
+
+    @pytest.mark.asyncio
+    async def test_returns_document_id_on_success(self):
+        """Test that a successful generation returns the new documentId."""
+        ref = _make_ref()
+        mock_doc = MagicMock(spec=DocumentModel)
+        mock_doc.id = "507f1f77bcf86cd799439011"
+        graph_result = _make_graph_result()
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "langraph.app.graph.build_graph",
+                _mock_build_graph(graph_result),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 2),
+            ),
+        ):
+            MockDocCls.return_value = mock_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
+
+            result = await mcp_generate_document(
+                reference_ids=["607f1f77bcf86cd799439011"],
+                context="Generate an NDA for two parties.",
+            )
+
+        assert "documentId" in result
+
+    @pytest.mark.asyncio
+    async def test_raises_on_no_valid_references(self):
+        """Test that a RuntimeError is raised when no references are found."""
+        with patch.object(
+            ReferenceModel,
+            "get",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
+            with pytest.raises(RuntimeError, match="No valid references found."):
+                await mcp_generate_document(
+                    reference_ids=["607f1f77bcf86cd799439011"],
+                    context="Some context",
+                )
+
+    @pytest.mark.asyncio
+    async def test_raises_on_graph_exception(self):
+        """Test that a RuntimeError is raised when the graph fails."""
+        ref = _make_ref()
+        mock_graph = MagicMock()
+
+        async def failing_ainvoke(state):
+            raise RuntimeError("graph exploded")
+
+        mock_graph.ainvoke = failing_ainvoke
+        mock_build = MagicMock(return_value=mock_graph)
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "langraph.app.graph.build_graph",
+                mock_build,
+            ),
+        ):
+            with pytest.raises(RuntimeError, match="graph exploded"):
+                await mcp_generate_document(
+                    reference_ids=["607f1f77bcf86cd799439011"],
+                    context="Some context",
+                )
+
+    @pytest.mark.asyncio
+    async def test_skips_phase_events(self):
+        """Test that phase events are skipped and only complete is returned."""
+        ref = _make_ref()
+        mock_doc = MagicMock(spec=DocumentModel)
+        mock_doc.id = "507f1f77bcf86cd799439011"
+        graph_result = _make_graph_result()
+
+        with (
+            patch.object(
+                ReferenceModel,
+                "get",
+                new_callable=AsyncMock,
+                return_value=ref,
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.DocumentModel",
+            ) as MockDocCls,
+            patch(
+                "langraph.app.graph.build_graph",
+                _mock_build_graph(
+                    graph_result,
+                    phases=["analyzing", "structuring", "drafting", "finalizing"],
+                ),
+            ),
+            patch(
+                "api.routes.v1.endpoints.documents.build_pdf",
+                return_value=(b"%PDF-fake", 1),
+            ),
+        ):
+            MockDocCls.return_value = mock_doc
+            MockDocCls.return_value.insert = AsyncMock(return_value=None)
+
+            result = await mcp_generate_document(
+                reference_ids=["607f1f77bcf86cd799439011"],
+                context="Test context",
+            )
+
+        assert "documentId" in result
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_raises_when_no_complete_event(self):
+        """Test RuntimeError is raised when generation ends without a complete event."""
+
+        async def mock_generate_events(request):
+            yield {"event": "phase", "data": '{"phase": "analyzing"}'}
+
+        with patch(
+            "api.routes.v1.endpoints.documents._generate_events",
+            mock_generate_events,
+        ):
+            with pytest.raises(
+                RuntimeError,
+                match="Generation ended without a complete event.",
+            ):
+                await mcp_generate_document(
+                    reference_ids=["607f1f77bcf86cd799439011"],
+                    context="Some context",
+                )

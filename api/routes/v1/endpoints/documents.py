@@ -16,6 +16,7 @@ from fastapi.responses import Response
 from pymongo import ReturnDocument
 from sse_starlette.sse import EventSourceResponse
 
+from api.core.mcp import mcp
 from api.models.document import DocumentModel, DocumentStatus, DocumentType
 from api.models.reference import ReferenceModel
 from api.schemas.document import (
@@ -84,6 +85,129 @@ def _serialize_document(doc: DocumentModel | dict) -> DocumentResponse:
     )
 
 
+def _serialize_document_dict(doc: DocumentModel | dict) -> dict:
+    """Convert a Beanie DocumentModel or raw MongoDB dict to a plain dict.
+
+    Includes a pdfUrl field derived from the document ID.
+
+    Args:
+        doc: A Beanie document model instance or a raw MongoDB dict.
+
+    Returns:
+        A dict with id, title, type, status, description, createdAt,
+        pageCount, and pdfUrl fields.
+    """
+    if isinstance(doc, dict):
+        doc_id = str(doc["_id"])
+        return {
+            "id": doc_id,
+            "title": doc["title"],
+            "type": doc["type"],
+            "status": doc["status"],
+            "description": doc["description"],
+            "createdAt": doc["created_at"].isoformat(),
+            "pageCount": doc["page_count"],
+            "pdfUrl": f"/api/v1/documents/{doc_id}/pdf",
+        }
+    doc_id = str(doc.id)
+    return {
+        "id": doc_id,
+        "title": doc.title,
+        "type": doc.type,
+        "status": doc.status,
+        "description": doc.description,
+        "createdAt": doc.created_at.isoformat(),
+        "pageCount": doc.page_count,
+        "pdfUrl": f"/api/v1/documents/{doc_id}/pdf",
+    }
+
+
+async def _query_documents(
+    sort: "SortOption",
+    type: DocumentType | None = None,
+    cursor: str | None = None,
+    limit: int = 6,
+) -> tuple[list[DocumentModel], str | None]:
+    """Query documents with cursor-based pagination.
+
+    Args:
+        sort: Sort order (recent or alpha).
+        type: Optional document type filter.
+        cursor: Optional pagination cursor.
+        limit: Maximum number of documents to return.
+
+    Returns:
+        A tuple of (documents, next_cursor).
+
+    Raises:
+        ValueError: If the cursor is invalid.
+    """
+    query: dict = {}
+
+    if type is not None:
+        query["type"] = type
+
+    if cursor is not None:
+        try:
+            cursor_data = _decode_cursor(cursor)
+            cursor_id = PydanticObjectId(cursor_data["_id"])
+        except Exception:
+            raise ValueError("Invalid cursor value.")
+
+        if sort == SortOption.RECENT:
+            cursor_date = datetime.fromisoformat(cursor_data["created_at"])
+            query["$or"] = [
+                {"created_at": {"$lt": cursor_date}},
+                {"created_at": cursor_date, "_id": {"$lt": cursor_id}},
+            ]
+        else:
+            cursor_title = cursor_data["title"]
+            query["$or"] = [
+                {"title": {"$gt": cursor_title}},
+                {"title": cursor_title, "_id": {"$gt": cursor_id}},
+            ]
+
+    sort_field = "-created_at" if sort == SortOption.RECENT else "+title"
+
+    docs = await DocumentModel.find(query).sort(sort_field).limit(limit + 1).to_list()
+
+    has_next = len(docs) > limit
+    if has_next:
+        docs = docs[:limit]
+
+    next_cursor = _encode_cursor(docs[-1], sort) if has_next and docs else None
+
+    return docs, next_cursor
+
+
+async def _find_and_update_status(
+    document_id: str, status: str
+) -> dict | None:
+    """Find a document by ID and update its status.
+
+    Args:
+        document_id: The MongoDB ObjectId string.
+        status: The new status value.
+
+    Returns:
+        The raw MongoDB document dict after update, or None if not found.
+
+    Raises:
+        ValueError: If the document_id is invalid.
+    """
+    try:
+        doc_id = PydanticObjectId(document_id)
+    except Exception:
+        raise ValueError("Invalid document ID.")
+
+    raw = await DocumentModel.get_motor_collection().find_one_and_update(
+        {"_id": doc_id},
+        {"$set": {"status": status}},
+        return_document=ReturnDocument.AFTER,
+    )
+    return raw
+
+
 @router.get("", response_model=DocumentListResponse)
 async def list_documents(
     sort: SortOption = Query(SortOption.RECENT, description="Sort order"),
@@ -98,56 +222,21 @@ async def list_documents(
     document IDs.
     """
     try:
-        query = {}
-
-        if type is not None:
-            query["type"] = type
-
-        if cursor is not None:
-            try:
-                cursor_data = _decode_cursor(cursor)
-                cursor_id = PydanticObjectId(cursor_data["_id"])
-            except Exception:
-                logger.warning("Invalid cursor value received")
-                return DocumentListResponse(
-                    error=ErrorDetail(
-                        message="Invalid cursor value.",
-                        code="INVALID_CURSOR",
-                    ),
-                )
-
-            if sort == SortOption.RECENT:
-                cursor_date = datetime.fromisoformat(cursor_data["created_at"])
-                query["$or"] = [
-                    {"created_at": {"$lt": cursor_date}},
-                    {"created_at": cursor_date, "_id": {"$lt": cursor_id}},
-                ]
-            else:
-                cursor_title = cursor_data["title"]
-                query["$or"] = [
-                    {"title": {"$gt": cursor_title}},
-                    {"title": cursor_title, "_id": {"$gt": cursor_id}},
-                ]
-
-        if sort == SortOption.RECENT:
-            sort_field = "-created_at"
-        else:
-            sort_field = "+title"
-
-        docs = (
-            await DocumentModel.find(query).sort(sort_field).limit(limit + 1).to_list()
-        )
-
-        has_next = len(docs) > limit
-        if has_next:
-            docs = docs[:limit]
-
-        next_cursor = _encode_cursor(docs[-1], sort) if has_next and docs else None
+        docs, next_cursor = await _query_documents(sort, type, cursor, limit)
 
         return DocumentListResponse(
             data=DocumentListData(
                 documents=[_serialize_document(d) for d in docs],
                 nextCursor=next_cursor,
+            ),
+        )
+
+    except ValueError:
+        logger.warning("Invalid cursor value received")
+        return DocumentListResponse(
+            error=ErrorDetail(
+                message="Invalid cursor value.",
+                code="INVALID_CURSOR",
             ),
         )
 
@@ -213,20 +302,13 @@ async def update_document_status(
     Returns the updated document in the standard envelope.
     """
     try:
-        doc_id = PydanticObjectId(id)
-    except Exception:
+        raw = await _find_and_update_status(id, body.status)
+    except ValueError:
         return DocumentDetailResponse(
             error=ErrorDetail(
                 message="Invalid document ID.",
                 code="INVALID_ID",
             ),
-        )
-
-    try:
-        raw = await DocumentModel.get_motor_collection().find_one_and_update(
-            {"_id": doc_id},
-            {"$set": {"status": body.status}},
-            return_document=ReturnDocument.AFTER,
         )
     except Exception as exc:
         logger.exception("Failed to update document status")
@@ -249,6 +331,83 @@ async def update_document_status(
     return DocumentDetailResponse(
         data=_serialize_document(raw),
     )
+
+
+@mcp.tool()
+async def mcp_list_documents(
+    type: str | None = None,
+    sort: str = "recent",
+    cursor: str | None = None,
+    limit: int = 6,
+) -> dict:
+    """List legal documents with cursor-based pagination.
+
+    Args:
+        type: Optional document type to filter by
+              (Contract, Policy, Employment, NDA).
+        sort: Sort order: "recent" (newest first) or "alpha" (A-Z by title).
+        cursor: Pagination cursor from a previous response's nextCursor.
+        limit: Maximum number of documents to return (1-50).
+
+    Returns:
+        A dict with documents (list of document dicts each including a
+        pdfUrl) and nextCursor for the next page.
+    """
+    doc_type = DocumentType(type) if type is not None else None
+    sort_option = SortOption(sort)
+    docs, next_cursor = await _query_documents(sort_option, doc_type, cursor, limit)
+    return {
+        "documents": [_serialize_document_dict(d) for d in docs],
+        "nextCursor": next_cursor,
+    }
+
+
+@mcp.tool()
+async def mcp_update_document_status(document_id: str, status: str) -> dict:
+    """Update a legal document's status.
+
+    Args:
+        document_id: The MongoDB ObjectId of the document to update.
+        status: The new status (Done, Draft, Generating).
+
+    Returns:
+        The updated document dict with id, title, type, status,
+        description, createdAt, pageCount, and pdfUrl.
+    """
+    raw = await _find_and_update_status(document_id, DocumentStatus(status))
+    if raw is None:
+        return {"error": "Document not found."}
+    return _serialize_document_dict(raw)
+
+
+@mcp.tool()
+async def mcp_generate_document(
+    reference_ids: list[str], context: str
+) -> dict:
+    """Generate a new legal document from reference documents and user context.
+
+    Runs the full generation workflow (analyze, structure, draft, finalize),
+    builds the PDF, and persists the new document.
+
+    Args:
+        reference_ids: List of reference document MongoDB ObjectId strings.
+        context: User-provided context or questions for document generation.
+
+    Returns:
+        A dict with the new documentId string.
+    """
+    request = GenerateDocumentRequest(
+        referenceIds=reference_ids, context=context
+    )
+    async for event in _generate_events(request):
+        event_type = event.get("event")
+        if event_type == "error":
+            data = json.loads(event["data"])
+            raise RuntimeError(data["message"])
+        if event_type == "complete":
+            data = json.loads(event["data"])
+            return {"documentId": data["documentId"]}
+    raise RuntimeError("Generation ended without a complete event.")
 
 
 @router.get("/{id}/pdf", response_model=None)

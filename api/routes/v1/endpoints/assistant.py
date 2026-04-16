@@ -7,6 +7,7 @@ import logging
 from fastapi import APIRouter
 from sse_starlette.sse import EventSourceResponse
 
+from api.core.mcp import mcp
 from api.schemas.assistant import AssistantQueryRequest
 
 logger = logging.getLogger(__name__)
@@ -86,3 +87,34 @@ async def query_assistant(request: AssistantQueryRequest):
     sources array (each source has documentId, title, snippet).
     """
     return EventSourceResponse(_query_events(request))
+
+
+@mcp.tool()
+async def mcp_query_assistant(query: str) -> dict:
+    """Query the legal document assistant and return an answer with source citations.
+
+    Accepts a query string about generated legal documents in the system
+    and returns a dict containing the complete answer text
+    and an array of source references with snippets.
+
+    Args:
+        query: The question to answer using the generated legal documents.
+
+    Returns:
+        A dict with 'answer' (the synthesised text) and 'sources' (list of
+        dicts each containing documentId, title, snippet).
+    """
+    request = AssistantQueryRequest(query=query)
+    tokens: list[str] = []
+    sources: list[dict] = []
+
+    async for event in _query_events(request):
+        parsed = json.loads(event["data"])
+        if event["event"] == "error":
+            raise RuntimeError(parsed["message"])
+        if event["event"] == "token":
+            tokens.append(parsed["text"])
+        elif event["event"] == "complete":
+            sources = parsed["sources"]
+
+    return {"answer": "".join(tokens), "sources": sources}

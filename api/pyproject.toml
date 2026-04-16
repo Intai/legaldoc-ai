@@ -24,6 +24,7 @@ dependencies = [
     "opentelemetry-instrumentation-pymongo",
     "opentelemetry-instrumentation-logging",
     "clickhouse-connect",
+    "mcp[cli]>=1.27",
 ]
 
 [project.optional-dependencies]

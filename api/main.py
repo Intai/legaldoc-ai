@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.core.config import get_settings
 from api.core.dependencies import init_db
+from api.core.mcp import mcp
 from api.core.telemetry import instrument_app, setup_telemetry
 from api.routes.v1.router import router as v1_router
 
@@ -24,7 +25,11 @@ async def lifespan(app: FastAPI):
 
     vector_store.init_collection()
     logger.info("Vector store collection initialised")
-    yield
+
+    async with mcp.session_manager.run():
+        logger.info("MCP server started at /mcp")
+        yield
+        logger.info("MCP server shutting down")
 
 
 def create_app() -> FastAPI:
@@ -47,6 +52,8 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(v1_router, prefix="/api/v1")
+
+    app.mount("/", mcp.streamable_http_app())
 
     instrument_app(app)
 

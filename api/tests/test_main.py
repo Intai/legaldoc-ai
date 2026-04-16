@@ -23,6 +23,15 @@ def app():
         yield create_app()
 
 
+@pytest.fixture
+def mock_session_manager():
+    """Create a mock MCP session manager with async context support."""
+    manager = MagicMock()
+    ctx = AsyncMock()
+    manager.run.return_value = ctx
+    return manager
+
+
 class TestAppCreation:
     """Tests for FastAPI application setup."""
 
@@ -48,6 +57,11 @@ class TestAppCreation:
         """Test that the v1 router is mounted at /api/v1."""
         route_paths = [route.path for route in app.routes]
         assert any(path.startswith("/api/v1") for path in route_paths)
+
+    def test_mcp_server_mounted(self, app):
+        """Test that the MCP server is mounted at root."""
+        route_paths = [route.path for route in app.routes]
+        assert "" in route_paths
 
 
 class TestTelemetry:
@@ -97,6 +111,31 @@ class TestLifespan:
             async with app.router.lifespan_context(app):
                 mock_init_db.assert_called_once()
                 mock_logger.info.assert_any_call("Database initialised")
+
+    @pytest.mark.asyncio
+    async def test_lifespan_runs_mcp_session_manager(self, mock_session_manager):
+        """Test that the lifespan starts and stops the MCP session manager."""
+        mock_vs = MagicMock()
+        mock_services = MagicMock()
+        mock_services.vector_store = mock_vs
+        with (
+            patch("api.main.init_db", new_callable=AsyncMock),
+            patch("api.main.instrument_app"),
+            patch("api.main.mcp") as mock_mcp,
+            patch.dict(
+                sys.modules,
+                {
+                    "langraph": MagicMock(),
+                    "langraph.services": mock_services,
+                    "langraph.services.vector_store": mock_vs,
+                },
+            ),
+        ):
+            mock_mcp.session_manager = mock_session_manager
+            mock_mcp.streamable_http_app.return_value = MagicMock()
+            app = create_app()
+            async with app.router.lifespan_context(app):
+                mock_session_manager.run.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_lifespan_calls_init_collection(self):

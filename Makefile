@@ -65,5 +65,5 @@ ifeq ($(include),all)
 else ifdef include
 	cd web && npm run test:e2e -- --grep "@$(include)"
 else
-	cd web && npm run test:e2e -- --grep-invert "@timeout|@signoz"
+	cd web && npm run test:e2e -- --grep-invert "@timeout|@signoz|@mcp"
 endif

@@ -3,8 +3,22 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from bson.codec_options import CodecOptions
+from mcp.server.fastmcp import FastMCP
 
 from api.core.config import Settings
+from api.core.mcp import mcp
+
+
+class TestMcp:
+    """Tests for the MCP server instance."""
+
+    def test_mcp_is_fastmcp_instance(self):
+        """mcp should be an instance of FastMCP."""
+        assert isinstance(mcp, FastMCP)
+
+    def test_mcp_name(self):
+        """mcp should be named 'legaldoc-ai'."""
+        assert mcp.name == "legaldoc-ai"
 
 
 class TestSettings:

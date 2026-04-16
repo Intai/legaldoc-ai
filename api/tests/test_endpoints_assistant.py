@@ -9,6 +9,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from api.main import create_app
+from api.routes.v1.endpoints.assistant import mcp_query_assistant
 
 # Pre-seed sys.modules with mock langraph modules to prevent importing
 # the real modules (which require API keys).
@@ -296,3 +297,71 @@ class TestQueryAssistant:
 
         assert len(token_events) == 0
         assert len(complete_events) == 1
+
+
+class TestMcpQueryAssistant:
+    """Tests for the mcp_query_assistant MCP tool."""
+
+    @pytest.mark.asyncio
+    async def test_returns_answer_and_sources(self):
+        """Test that the tool returns accumulated answer text and sources."""
+        sources = [
+            {
+                "document_id": "abc123",
+                "title": "Contract A",
+                "snippet": "Liability clause.",
+            },
+        ]
+        rag_result = _make_rag_result(
+            answer="The answer is 42.",
+            sources=sources,
+        )
+
+        with patch(
+            "langraph.app.rag_graph.build_rag_graph",
+            _mock_build_rag_graph(rag_result),
+        ):
+            result = await mcp_query_assistant(query="What is the liability?")
+
+        assert result["answer"] == "The answer is 42."
+        assert result["sources"] == [
+            {
+                "documentId": "abc123",
+                "title": "Contract A",
+                "snippet": "Liability clause.",
+            },
+        ]
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_answer_when_no_tokens(self):
+        """Test that an empty answer is returned when graph emits no tokens."""
+        rag_result = _make_rag_result(sources=[])
+
+        with patch(
+            "langraph.app.rag_graph.build_rag_graph",
+            _mock_build_rag_graph(rag_result, tokens=[]),
+        ):
+            result = await mcp_query_assistant(query="Anything?")
+
+        assert result["answer"] == ""
+        assert result["sources"] == []
+
+    @pytest.mark.asyncio
+    async def test_raises_on_graph_error(self):
+        """Test that a RuntimeError is raised when the graph fails."""
+        mock_graph = MagicMock()
+
+        async def failing_ainvoke(state):
+            raise RuntimeError("LLM failure")
+
+        mock_graph.ainvoke = failing_ainvoke
+        mock_build = MagicMock(return_value=mock_graph)
+
+        with (
+            patch(
+                "langraph.app.rag_graph.build_rag_graph",
+                mock_build,
+            ),
+            pytest.raises(RuntimeError, match="LLM failure"),
+        ):
+            await mcp_query_assistant(query="This will fail.")

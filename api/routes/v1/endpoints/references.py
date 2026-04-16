@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, Query, UploadFile
 from pypdf import PdfReader
 
+from api.core.mcp import mcp
 from api.models.document import DocumentType
 from api.models.reference import ReferenceModel
 from api.schemas.common import ErrorDetail
@@ -43,6 +44,43 @@ def _serialize_reference(ref: ReferenceModel) -> ReferenceResponse:
     )
 
 
+def _serialize_reference_dict(ref: ReferenceModel) -> dict:
+    """Convert a Beanie ReferenceModel to a plain dict for MCP responses.
+
+    Args:
+        ref: The Beanie reference model instance.
+
+    Returns:
+        A dict with id, title, type, description, and createdAt fields.
+    """
+    return {
+        "id": str(ref.id),
+        "title": ref.title,
+        "type": ref.type,
+        "description": ref.description,
+        "createdAt": ref.created_at.isoformat(),
+    }
+
+
+async def _query_references(
+    type: DocumentType | None = None,
+) -> list[ReferenceModel]:
+    """Query references from the database with optional type filtering.
+
+    Args:
+        type: Optional document type to filter by.
+
+    Returns:
+        A list of ReferenceModel instances sorted by created_at descending.
+    """
+    query = {}
+
+    if type is not None:
+        query["type"] = type
+
+    return await ReferenceModel.find(query).sort("-created_at").to_list()
+
+
 @router.get("", response_model=ReferenceListResponse)
 async def list_references(
     type: DocumentType | None = Query(None, description="Filter by document type"),
@@ -52,12 +90,7 @@ async def list_references(
     Supports optional filtering by document type.
     """
     try:
-        query = {}
-
-        if type is not None:
-            query["type"] = type
-
-        refs = await ReferenceModel.find(query).sort("-created_at").to_list()
+        refs = await _query_references(type)
 
         return ReferenceListResponse(
             data=ReferenceListData(
@@ -73,6 +106,22 @@ async def list_references(
                 code="INTERNAL_ERROR",
             ),
         )
+
+
+@mcp.tool()
+async def mcp_list_references(type: str | None = None) -> list[dict]:
+    """List all reference documents, optionally filtered by type.
+
+    Args:
+        type: Optional document type to filter by
+              (Contract, Policy, Employment, NDA).
+
+    Returns:
+        A list of dicts with id, title, type, description, and createdAt.
+    """
+    doc_type = DocumentType(type) if type is not None else None
+    refs = await _query_references(doc_type)
+    return [_serialize_reference_dict(r) for r in refs]
 
 
 def _extract_text_from_pdf(content: bytes) -> str:

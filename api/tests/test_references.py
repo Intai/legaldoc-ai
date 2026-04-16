@@ -9,7 +9,12 @@ from httpx import ASGITransport, AsyncClient
 from api.main import create_app
 from api.models.document import DocumentType
 from api.models.reference import ReferenceModel
-from api.routes.v1.endpoints.references import _extract_text_from_pdf
+from api.routes.v1.endpoints.references import (
+    _extract_text_from_pdf,
+    _query_references,
+    _serialize_reference_dict,
+    mcp_list_references,
+)
 
 
 def _make_ref(
@@ -400,3 +405,99 @@ class TestExtractTextFromPdf:
             result = _extract_text_from_pdf(b"fake-pdf-bytes")
 
         assert result == "Page 1. Page 2."
+
+
+class TestSerializeReferenceDict:
+    """Tests for the _serialize_reference_dict helper."""
+
+    def test_converts_reference_model_to_dict(self):
+        """Test that a ReferenceModel is converted to a dict with camelCase keys."""
+        ref = _make_ref(
+            title="My Doc",
+            ref_type=DocumentType.NDA,
+            description="desc",
+            ref_id="abc123",
+            created_at=datetime(2025, 3, 1, 12, 0, 0, tzinfo=timezone.utc),
+        )
+
+        result = _serialize_reference_dict(ref)
+
+        assert result == {
+            "id": "abc123",
+            "title": "My Doc",
+            "type": DocumentType.NDA,
+            "description": "desc",
+            "createdAt": "2025-03-01T12:00:00+00:00",
+        }
+
+
+class TestQueryReferences:
+    """Tests for the _query_references shared helper."""
+
+    @pytest.mark.asyncio
+    async def test_queries_all_references_without_filter(self):
+        """Test that passing no type returns all references sorted descending."""
+        ref = _make_ref()
+        mock_find, mock_sort = _mock_find([ref])
+
+        with patch.object(ReferenceModel, "find", return_value=mock_find) as find_call:
+            result = await _query_references()
+
+        find_call.assert_called_once_with({})
+        mock_find.sort.assert_called_once_with("-created_at")
+        assert result == [ref]
+
+    @pytest.mark.asyncio
+    async def test_queries_references_filtered_by_type(self):
+        """Test that passing a type filters the query."""
+        mock_find, _ = _mock_find([])
+
+        with patch.object(ReferenceModel, "find", return_value=mock_find) as find_call:
+            await _query_references(DocumentType.POLICY)
+
+        call_args = find_call.call_args[0][0]
+        assert call_args["type"] == DocumentType.POLICY
+
+
+class TestMcpListReferences:
+    """Tests for the mcp_list_references MCP tool."""
+
+    @pytest.mark.asyncio
+    async def test_returns_all_references_as_dicts(self):
+        """Test that calling without type returns all references as dicts."""
+        ref = _make_ref(
+            title="Ref 1",
+            ref_id="id1",
+            created_at=datetime(2025, 2, 1, 8, 0, 0, tzinfo=timezone.utc),
+        )
+        mock_find, _ = _mock_find([ref])
+
+        with patch.object(ReferenceModel, "find", return_value=mock_find):
+            result = await mcp_list_references()
+
+        assert len(result) == 1
+        assert result[0]["id"] == "id1"
+        assert result[0]["title"] == "Ref 1"
+        assert result[0]["createdAt"] == "2025-02-01T08:00:00+00:00"
+
+    @pytest.mark.asyncio
+    async def test_filters_by_type_string(self):
+        """Test that passing a type string filters references by document type."""
+        mock_find, _ = _mock_find([])
+
+        with patch.object(ReferenceModel, "find", return_value=mock_find) as find_call:
+            result = await mcp_list_references(type="NDA")
+
+        call_args = find_call.call_args[0][0]
+        assert call_args["type"] == DocumentType.NDA
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_list_when_no_references(self):
+        """Test that an empty collection returns an empty list."""
+        mock_find, _ = _mock_find([])
+
+        with patch.object(ReferenceModel, "find", return_value=mock_find):
+            result = await mcp_list_references()
+
+        assert result == []

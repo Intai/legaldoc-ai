@@ -57,6 +57,7 @@ LegalDoc AI streamlines legal document creation. Select one or more reference do
 - [Document page BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/document-detail.feature)
 - [Generate document BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/new-document.feature)
 - [LangGraph workflow BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/generate-document.feature)
+- [MCP tools BDD scenarios](https://github.com/Intai/legaldoc-ai/blob/main/web/src/documents/docs/mcp.feature)
 - [Tech stack](https://github.com/Intai/legaldoc-ai/blob/main/CLAUDE.md)
 
 ```
@@ -104,3 +105,15 @@ The RAG query pipeline retrieves and synthesises answers from previously ingeste
 | [Retrieve&nbsp;SPARQL](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/extract_regulations.txt) | Extracts regulation references from the query via LLM, then fetches matching articles from the EU Publications Office SPARQL endpoint. |
 | [Rerank](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rerank.txt) | Uses an LLM to score and rerank retrieved chunks by relevance, returning the top-5 results. |
 | [Answer](https://github.com/Intai/legaldoc-ai/blob/main/langraph/prompts/rag_answer.txt) | Synthesises a concise answer from the reranked chunks via an LLM, streaming token-by-token, and extracts deduplicated source citations. |
+
+### MCP Tools
+
+An [MCP](https://modelcontextprotocol.io/) server is mounted at `/mcp` using Streamable HTTP transport, allowing AI clients such as Claude Code to interact with the system programmatically.
+
+| Tool | Purpose |
+|---|---|
+| `mcp_list_documents` | Lists generated documents with cursor-based pagination, type filtering, and sort order (recent or alphabetical). |
+| `mcp_update_document_status` | Updates a document's status (Draft, Done, Generating). |
+| `mcp_list_references` | Lists reference documents, optionally filtered by type (Contract, Policy, Employment, NDA). |
+| `mcp_generate_document` | Generates a new legal document from reference documents and user-provided context via the full LangGraph workflow. |
+| `mcp_query_assistant` | Queries the RAG assistant for answers about generated documents, returning synthesised text with source citations. |

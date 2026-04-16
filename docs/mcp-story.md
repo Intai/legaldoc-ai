@@ -12,7 +12,7 @@ As a developer, I want to add an MCP (Model Context Protocol) server to the exis
   - `mcp_generate_document` — submit a document generation request, returning the new document ID.
 - `mcp_query_assistant` and `mcp_generate_document` must reuse the existing `_query_events` and `_generate_events` async generators rather than duplicating graph invocation logic.
 - `mcp_list_documents` must use the same cursor-based pagination as the REST endpoint for consistency.
-- Mount the MCP server into the FastAPI app using Streamable HTTP transport at `/mcp`.
+- Mount the MCP Streamable HTTP sub-app at `/` in FastAPI so the sub-app's internal `/mcp` route serves at `/mcp`. Run `mcp.session_manager.run()` in the FastAPI lifespan since Starlette does not trigger sub-app lifespans for mounted apps.
 - Configure the MCP server in `.mcp.json` with `"type": "http"`.
 
 ## Tasks
@@ -28,7 +28,7 @@ As a developer, I want to add an MCP (Model Context Protocol) server to the exis
 
 5. Use backend-developer subagent to add `mcp_list_references` tool to @api/routes/v1/endpoints/references.py. Import `mcp` from `api.core.mcp`. Extract the query and serialization logic from the `list_references` REST endpoint into a shared helper. Register an `@mcp.tool()` function with optional `type` parameter that calls the shared helper and returns a list of dicts with `id`, `title`, `type`, `description`, `createdAt`.
 6. Use backend-developer subagent to add `mcp_query_assistant` tool to @api/routes/v1/endpoints/assistant.py. Import `mcp` from `api.core.mcp`. Register an `@mcp.tool()` function with a `query` parameter. Consume the existing `_query_events` async generator, accumulate token texts into the full answer, and return a dict with `answer` and `sources` from the complete event. Raise on error events.
-7. Use backend-developer subagent to mount the MCP server into the FastAPI app @api/main.py. Import `mcp` from `api.core.mcp`. Call `app.mount("/mcp", mcp.streamable_http_app())` in `create_app()` before `instrument_app()`.
+7. Use backend-developer subagent to mount the MCP server into the FastAPI app @api/main.py. Import `mcp` from `api.core.mcp`. Call `app.mount("/", mcp.streamable_http_app())` in `create_app()` before `instrument_app()` — mount at `/` so the sub-app's internal `/mcp` route serves at `/mcp`. Keep `async with mcp.session_manager.run()` in the lifespan wrapping the `yield`, since Starlette does not trigger sub-app lifespans for mounted apps.
 
 **Sequential tasks 8-9 after task 2 completes:**
 
