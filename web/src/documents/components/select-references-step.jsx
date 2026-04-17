@@ -64,6 +64,7 @@ function SelectReferencesStep() {
               <SelectItem value="Contract">{t('newDocument.filterContract')}</SelectItem>
               <SelectItem value="Policy">{t('newDocument.filterPolicy')}</SelectItem>
               <SelectItem value="Employment">{t('newDocument.filterEmployment')}</SelectItem>
+              <SelectItem value="NDA">{t('newDocument.filterNda')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
